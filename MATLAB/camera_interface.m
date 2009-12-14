@@ -8,3 +8,5 @@ phi = 2*atan(110/235) %radians
 phi_degrees = 360*phi/(2*pi) %degrees
 
 preview(vid)
+
+%conflict test
