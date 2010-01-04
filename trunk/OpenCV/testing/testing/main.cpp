@@ -53,33 +53,8 @@ int main(int argc, char* argv[])
 	CvSize size = cvSize(800, 425); // size for screen display
 
 	IplImage *img = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"Picture 10.jpg"); 
+		"Picture 38.jpg"); 
 	cvCvtColor(img, img, CV_BGR2RGB);
-
-	// compute the bg-fg difference image
-	/*IplImage *bg;
-    bg = getBackground();
-	cvCvtColor(bg, bg, CV_BGR2RGB);
-
-	IplImage *diff = createBlankCopy(img);
-	cvAbsDiff(img, bg, diff);*/
-
-	// a point inside the white ball
-	//int p[2] = {515, 370}; // for Picture 10
-	//int p[2] = {940, 370}; // for Picture 11
-
-	// DEBUG -- print a cross on the point p
-	/*cvLine(img, cvPoint(p[0]-5, p[1]),
-		cvPoint(p[0]+5, p[1]), cvScalar(0xff), 2);
-	cvLine(img, cvPoint(p[0], p[1]-5),
-		cvPoint(p[0], p[1]+5), cvScalar(0xff), 2);
-
-	cvNamedWindow("Wnd-0", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-0", img);
-	cvWaitKey(0);
-	cvDestroyWindow("Wnd-0");
-
-	return 0;*/
 
 	cvNamedWindow("Output", CV_WINDOW_AUTOSIZE);
 	cvShowImage("Output", img);
@@ -324,7 +299,7 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 	float radial_step_size = 0.25;
 	float spatial_steps[] = {1, 0.5, 0.25};
 	int spatial_steps_len = 3;
-	float angles[] = {0*PI/8, 1*PI/8, 2*PI/8, 3*PI/8, 4*PI/8, 5*PI/8, 6*PI/8, 7*PI/8,
+	double angles[] = {0*PI/8, 1*PI/8, 2*PI/8, 3*PI/8, 4*PI/8, 5*PI/8, 6*PI/8, 7*PI/8,
 		8*PI/8, 9*PI/8, 10*PI/8, 11*PI/8, 12*PI/8, 13*PI/8, 14*PI/8, 15*PI/8};
 	int angles_len = 16;
 
@@ -373,10 +348,10 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 
 			center.x = movement_center.x +
 				spatial_steps[movement/angles_len]*
-				cos(angles[movement%angles_len]);
+				(float)cos(angles[movement%angles_len]);
 			center.y = movement_center.y +
 				spatial_steps[movement/angles_len]*
-				sin(angles[movement%angles_len]);
+				(float)sin(angles[movement%angles_len]);
 		} else { // we've not found a non-zero
 			// enlarge the radius
 			radius += radial_step_size;
@@ -483,6 +458,9 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 		// change to BW
 	cvSmooth(grad, grad, CV_MEDIAN, 3);
 	cvThreshold(grad, grad, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+	if(cvGet2D(grad, crop_inside.x, crop_inside.y).val[0] == 255) {
+		cvAbsDiffS(grad, grad, cvScalar(255));
+	}
 
 		// find the circle containing the given point in the BW image
 	findMaxContainedCircle(grad, crop_inside, center,
