@@ -37,7 +37,8 @@ void colorThresh(IplImage *src_image, IplImage *dst_mask, CvScalar color,
 /* Finds the center and radius of the maximal circle containing the point
 given, and not containing any non-zero point in the given image. */
 void findMaxContainedCircle(IplImage *bw, CvPoint inside,
-							CvPoint2D32f *f_center, float *f_radius);
+							CvPoint2D32f *f_center, float *f_radius,
+							int thresh);
 
 /* This tries to find the center and radius of the ball which contains
 the given point, in the image. */
@@ -53,7 +54,7 @@ int main(int argc, char* argv[])
 	CvSize size = cvSize(800, 425); // size for screen display
 
 	IplImage *img = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"Picture 38.jpg"); 
+		"Picture 11.jpg"); 
 	cvCvtColor(img, img, CV_BGR2RGB);
 
 	cvNamedWindow("Output", CV_WINDOW_AUTOSIZE);
@@ -77,8 +78,8 @@ void mouse_callback(int event, int x, int y, int flags, void *param) {
 
 	IplImage *img = (IplImage *)param;
 
-	x /= 1.6;
-	y /= 1.6;
+	x /= 1.5625;
+	y /= 1.5625;
 
 	// find the ball parameters
 	CvPoint2D32f center;
@@ -287,8 +288,9 @@ Works by starting with a little circle around the point given, and tries to
 enlarge it. If it meets any non-zero pixel, it tries to move: left, right, up,
 down, or diagonally and continue growing. When we can't move and not meet a
 non-zero pixel, we're done.*/
-void findMaxContainedCircle(IplImage *bw, CvPoint inside,
-							CvPoint2D32f *f_center, float *f_radius) {
+void findMaxContainedCircle(IplImage *bw, CvPoint inside, 
+							CvPoint2D32f *f_center, float *f_radius,
+							int thresh) {
 	CvPoint2D32f center = cvPoint2D32f(inside.x, inside.y);
 	float radius = 1;
 
@@ -321,7 +323,7 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 		end_y = MIN(cvRound(center.y + radius), height-1);
 		for(x=start_x; x<=end_x && !found; x++) {
 			for(y=start_y; y<=end_y && !found; y++) {
-				if(cvGet2D(bw, y, x).val[0] > 0) {
+				if(cvGet2D(bw, y, x).val[0] >= thresh) {
 					// if there's a non-zero in it, it may be inside the circle!
 					dist2 = (x-center.x)*(x-center.x) +
 						(y-center.y)*(y-center.y);
@@ -385,8 +387,8 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 					float *radius) {
 
 	// crop around the ball
-	int max_radius = 55;
-	int min_radius = 45;
+	int max_radius = 27;
+	int min_radius = 23;
 
 	IplImage *cropped = cvCreateImage(
 		cvSize(4*max_radius, 4*max_radius), src->depth, src->nChannels);
@@ -464,7 +466,7 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 
 		// find the circle containing the given point in the BW image
 	findMaxContainedCircle(grad, crop_inside, center,
-		radius);
+		radius, 1);
 
 		// DEBUGGING
 	// set "cropped" to an overlay of the BW over the crop
