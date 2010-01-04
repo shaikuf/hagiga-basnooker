@@ -6,6 +6,8 @@
 
 using namespace std;
 
+#define PI 3.14159265
+
 /* Get the background from multiple background files and avergage them */
 IplImage* getBackground();
 
@@ -43,48 +45,73 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 					float *radius);
 
 
+void mouse_callback(int event, int x, int y, int flags, void *param);
 
 int main(int argc, char* argv[])
 {
 	CvRect crop = cvRect(0, 0, 1600, 850); // crop zone for testing
 	CvSize size = cvSize(800, 425); // size for screen display
 
-	IplImage *white_ball = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
+	IplImage *img = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
 		"Picture 10.jpg"); 
-	cvCvtColor(white_ball, white_ball, CV_BGR2RGB);
+	cvCvtColor(img, img, CV_BGR2RGB);
 
 	// compute the bg-fg difference image
 	/*IplImage *bg;
     bg = getBackground();
 	cvCvtColor(bg, bg, CV_BGR2RGB);
 
-	IplImage *diff = createBlankCopy(white_ball);
-	cvAbsDiff(white_ball, bg, diff);*/
+	IplImage *diff = createBlankCopy(img);
+	cvAbsDiff(img, bg, diff);*/
 
 	// a point inside the white ball
-	int p[2] = {515, 370}; // for Picture 10
+	//int p[2] = {515, 370}; // for Picture 10
 	//int p[2] = {940, 370}; // for Picture 11
 
-	// print a cross on the point p
-	/*cvLine(white_ball, cvPoint(p[0]-5, p[1]),
+	// DEBUG -- print a cross on the point p
+	/*cvLine(img, cvPoint(p[0]-5, p[1]),
 		cvPoint(p[0]+5, p[1]), cvScalar(0xff), 2);
-	cvLine(white_ball, cvPoint(p[0], p[1]-5),
+	cvLine(img, cvPoint(p[0], p[1]-5),
 		cvPoint(p[0], p[1]+5), cvScalar(0xff), 2);
 
 	cvNamedWindow("Wnd-0", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-0", white_ball);
+	cvShowImage("Wnd-0", img);
 	cvWaitKey(0);
 	cvDestroyWindow("Wnd-0");
 
 	return 0;*/
 
+	cvNamedWindow("Output", CV_WINDOW_AUTOSIZE);
+	cvShowImage("Output", img);
+
+	cvSetMouseCallback("Output", mouse_callback, img);
+	while(1) {
+		if(cvWaitKey(15) == 27)
+			break;
+	}
+
+	cvReleaseImage(&img);
+	cvDestroyWindow("Output");
+
+	return 0;
+}
+
+void mouse_callback(int event, int x, int y, int flags, void *param) {
+	if(event != CV_EVENT_LBUTTONUP)
+		return;
+
+	IplImage *img = (IplImage *)param;
+
+	x /= 1.6;
+	y /= 1.6;
+
 	// find the ball parameters
 	CvPoint2D32f center;
 	float radius;
-	findBallAround(white_ball, cvPoint(p[0],p[1]), &center, &radius);
+	findBallAround(img, cvPoint(x,y), &center, &radius);
 
 	// print an overlay image of the found circle
-	IplImage *overlay = createBlankCopy(white_ball);
+	IplImage *overlay = createBlankCopy(img);
 	IplImage *overlay_drawing = createBlankCopy(overlay, 1);
 	IplImage *overlay_blank = createBlankCopy(overlay, 1);
 
@@ -102,24 +129,25 @@ int main(int argc, char* argv[])
 
 	cvMerge(overlay_blank, overlay_blank, overlay_drawing, 0, overlay);
 
-	cvAddWeighted(white_ball, 1, overlay, 0.5, 0, white_ball);
+	IplImage *temp = cvCloneImage(img);
+	cvAddWeighted(img, 1, overlay, 0.5, 0, temp);
 
 	cvReleaseImage(&overlay);
 	cvReleaseImage(&overlay_drawing);
 	cvReleaseImage(&overlay_blank);
 
-	cvNamedWindow("Wnd-5", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-5", white_ball);
-	cvWaitKey(0);
-	cvDestroyWindow("Wnd-5");
+	// DEBUG -- print a cross where the mouse is
+	/*IplImage *temp = cvCloneImage(img);
 
-	cvReleaseImage(&white_ball);
+	cvLine(temp, cvPoint(x-5, y),
+		cvPoint(x+5, y), cvScalar(0xff), 2);
+	cvLine(temp, cvPoint(x, y-5),
+		cvPoint(x, y+5), cvScalar(0xff), 2);*/
 
-	return 0;
+	cvShowImage("Output", temp);
+
+	cvReleaseImage(&temp);
 }
-
-
-
 
 /* Get the background from multiple background files and avergage them */
 IplImage* getBackground() {
@@ -142,7 +170,7 @@ IplImage* getBackground() {
 
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */
-IplImage *createBlankCopy(IplImage *src, int channels = -1, int depth = -1) {
+IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
 	if(depth == -1)
 		depth = src->depth;
 	if(channels == -1)
@@ -292,9 +320,15 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 	int height = cvGetSize(bw).height;
 	int width = cvGetSize(bw).width;
 
-	float spatial_step_size = 0.5;
-	float radial_step_size = 0.5;
-	int maxIter = 10000;
+	int maxIter = 2500;
+	float radial_step_size = 0.25;
+	float spatial_steps[] = {1, 0.5, 0.25};
+	int spatial_steps_len = 3;
+	float angles[] = {0*PI/8, 1*PI/8, 2*PI/8, 3*PI/8, 4*PI/8, 5*PI/8, 6*PI/8, 7*PI/8,
+		8*PI/8, 9*PI/8, 10*PI/8, 11*PI/8, 12*PI/8, 13*PI/8, 14*PI/8, 15*PI/8};
+	int angles_len = 16;
+
+	//cvNamedWindow("Wnd-0", CV_WINDOW_AUTOSIZE);
 	
 	int start_x, start_y, end_x, end_y;
 	int x,y, i;
@@ -302,6 +336,7 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 	float dist2;
 	float radius2 = 1;
 	int movement = 0;
+	CvPoint2D32f movement_center;
 	for(i=0; i < maxIter; i++) {
 		found = false; // have we found a non-zero yet?
 		// run on the square containing the circle 
@@ -324,49 +359,44 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 		}
 
 		if(found) {	// we found a non-zero
+			if(movement == 0)
+				movement_center = center;
+
 			movement += 1; // try the next direction
 
-			if(movement > 8) {	// nothing worked
+			if(movement >= angles_len*spatial_steps_len) {	// nothing worked
 				// set center to the last working center
-				center.x -= 1;
-				center.y += 1;
+				center = movement_center;
 				// return
 				break;
 			}
 
-			switch(movement) {
-				case 1: // right
-					center.x += spatial_step_size;
-					break;
-				case 2: // upper-right
-					center.y += spatial_step_size;
-					break;
-				case 3: // up
-					center.x -= spatial_step_size;
-					break;
-				case 4: // upper-left
-					center.x -= spatial_step_size;
-					break;
-				case 5: // left
-					center.y -= spatial_step_size;
-					break;
-				case 6: // bottom-left
-					center.y -= spatial_step_size;
-					break;
-				case 7: // bottom
-					center.x += spatial_step_size;
-					break;
-				case 8: // bottom-right
-					center.x += spatial_step_size;
-					break;
-			}
+			center.x = movement_center.x +
+				spatial_steps[movement/angles_len]*
+				cos(angles[movement%angles_len]);
+			center.y = movement_center.y +
+				spatial_steps[movement/angles_len]*
+				sin(angles[movement%angles_len]);
 		} else { // we've not found a non-zero
 			// enlarge the radius
 			radius += radial_step_size;
 			radius2 = radius*radius;
 			movement = 0; // new try
 		}
+
+		// DEBUG
+		/*IplImage *temp = cvCloneImage(bw);
+		cvRectangle(temp, cvPoint(start_x, start_y), cvPoint(end_x, end_y),
+			cvScalar(0xaa));
+		cvCircle(temp, cvPoint(cvRound(center.x), cvRound(center.y)),
+			cvRound(radius), cvScalar(0xaa));
+		cvShowImage("Wnd-0", temp);
+		cout<<movement<<": "<<center.x<<" "<<center.y<<" -- "<<radius<<endl;
+		cvWaitKey(0);*/
+		// END DEBUG
 	}
+
+	//cvDestroyWindow("Wnd-0");
 
 	// return the found parameters
 	*f_radius = radius;
@@ -378,6 +408,7 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 the given point, in the image. */
 void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 					float *radius) {
+
 	// crop around the ball
 	int max_radius = 55;
 	int min_radius = 45;
@@ -385,11 +416,17 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 	IplImage *cropped = cvCreateImage(
 		cvSize(4*max_radius, 4*max_radius), src->depth, src->nChannels);
 
+	int src_width = cvGetSize(src).width;
+	int src_height = cvGetSize(src).height;
+	CvPoint crop_corner = cvPoint(MAX(inside.x-2*max_radius,0),
+		MAX(inside.y-2*max_radius,0));
 	cvSetImageROI( src, 
-		cvRect(inside.x-2*max_radius,inside.y-2*max_radius,
-		4*max_radius, 4*max_radius));
+		cvRect(crop_corner.x, crop_corner.y, 
+		MIN(4*max_radius,src_width), MIN(4*max_radius,src_height)));
 	cvCopy(src, cropped);
 	cvResetImageROI(src);
+	CvPoint crop_inside = cvPoint(inside.x - crop_corner.x,
+		inside.y - crop_corner.y);
 
 	// compute a laplacian of the channels and merge it
 		// split to channels
@@ -448,16 +485,17 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 	cvThreshold(grad, grad, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 
 		// find the circle containing the given point in the BW image
-	findMaxContainedCircle(grad, cvPoint(2*max_radius, 2*max_radius), center,
+	findMaxContainedCircle(grad, crop_inside, center,
 		radius);
 
 		// DEBUGGING
 	// set "cropped" to an overlay of the BW over the crop
-	/*IplImage *overlay = createBlankCopy(cropped);
+	IplImage *overlay = createBlankCopy(cropped);
 	IplImage *blank = createBlankCopy(grad);
 	cvSet(blank, cvScalar(0));
 	cvMerge(blank, blank, grad, 0, overlay);
-	cvAddWeighted(cropped, 0.5, overlay, 0.5, 0, cropped);*/
+	cvAddWeighted(cropped, 0.5, overlay, 0.5, 0, cropped);
+	cvCircle(cropped, crop_inside, 1, cvScalar(0xff,0,0), 2);
 
 	// overlay the found circle over the crop
 	/*cvCircle(cropped, cvPoint(cvRound(center->x), cvRound(center->y)),
@@ -469,26 +507,20 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 		cvPoint(cvRound(center->x), cvRound(center->y)+line_len), cvScalar(0xaa), 2);*/
 
 	// display the channels and the overlayed crop
-	/*cvNamedWindow("Wnd-0", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-0", grad_a8);
-	cvNamedWindow("Wnd-1", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-1", grad_b8);
 	cvNamedWindow("Wnd-2", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-2", grad_c8);
+	cvShowImage("Wnd-2", grad);
 	cvNamedWindow("Wnd-3", CV_WINDOW_AUTOSIZE);
 	cvShowImage("Wnd-3", cropped);
 
 	cvWaitKey(0);
 
-	cvDestroyWindow("Wnd-0");
-	cvDestroyWindow("Wnd-1");
 	cvDestroyWindow("Wnd-2");
-	cvDestroyWindow("Wnd-3");*/
-		// END DEBUGGING
+	cvDestroyWindow("Wnd-3");
+	// END DEBUGGING
 
 	// normalize the results to before the crop
-	center->x += inside.x-2*max_radius;
-	center->y += inside.y-2*max_radius;
+	center->x += crop_corner.x;
+	center->y += crop_corner.y;
 
 	cvReleaseImage(&grad_a8);
 	cvReleaseImage(&grad_b8);
