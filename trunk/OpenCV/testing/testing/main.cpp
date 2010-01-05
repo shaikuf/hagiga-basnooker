@@ -3,50 +3,9 @@
 #include <math.h>
 #include <iostream>
 #include "camera_interface.h"
+#include "main.h"
 
 using namespace std;
-
-#define PI 3.14159265
-
-/* Get the background from multiple background files and avergage them */
-IplImage* getBackground();
-
-/* Create a new IplImage, the same size of src. If channels is -1, it's also
-the same number of channels. The same for depth. */
-IplImage *createBlankCopy(IplImage *src, int channels = -1, int depth = -1);
-
-/* Normalize the image for debugging, so it could fit on the screen. */
-void normalize(IplImage* &img, CvRect crop, CvSize size);
-
-/* Set the channels a,b,c of src to:
-a/(a+b+c), b/(a+b+c), c/(a+b+c).
-This essentially normalizes the brightness and contrast, against global
-lighting changes.*/
-void equalize(IplImage *src, IplImage *dst);
-
-/* Find circles using Hough Transform, and draw them on the returned image,
-overlayed on the original image. */
-IplImage *findCircles(IplImage *src, int canny, int thresh, int min_dist,
-					  int min_radius, int max_radius);
-
-/* Compute a mask according to a threshold on the difference from a certain
-color (thresh may be different for each channel) */
-void colorThresh(IplImage *src_image, IplImage *dst_mask, CvScalar color, 
-                                 CvScalar thresh);
-
-/* Finds the center and radius of the maximal circle containing the point
-given, and not containing any non-zero point in the given image. */
-void findMaxContainedCircle(IplImage *bw, CvPoint inside,
-							CvPoint2D32f *f_center, float *f_radius,
-							int thresh);
-
-/* This tries to find the center and radius of the ball which contains
-the given point, in the image. */
-void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
-					float *radius);
-
-
-void mouse_callback(int event, int x, int y, int flags, void *param);
 
 int main(int argc, char* argv[])
 {
@@ -54,17 +13,23 @@ int main(int argc, char* argv[])
 	CvSize size = cvSize(800, 425); // size for screen display
 
 	IplImage *img = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"Picture 11.jpg"); 
-	cvCvtColor(img, img, CV_BGR2RGB);
+		"Picture 33.jpg"); 
+	normalize(img, crop, size);
 
 	cvNamedWindow("Output", CV_WINDOW_AUTOSIZE);
 	cvShowImage("Output", img);
 
-	cvSetMouseCallback("Output", mouse_callback, img);
+	// Find ball around mouse
+	/*cvSetMouseCallback("Output", findBallAroundMouse, img);
 	while(1) {
 		if(cvWaitKey(15) == 27)
 			break;
-	}
+	}*/
+
+	//cvWaitKey(0);
+	markStickOnImage(img);
+	cvShowImage("Output", img);
+	cvWaitKey(0);
 
 	cvReleaseImage(&img);
 	cvDestroyWindow("Output");
@@ -72,7 +37,31 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void mouse_callback(int event, int x, int y, int flags, void *param) {
+/* Finds and marks the cue stick on the image */
+void markStickOnImage(IplImage *src) {
+	IplImage *gray = createBlankCopy(src, 1);
+	cvCvtColor(src, gray, CV_BGR2GRAY);
+
+	// thresh on color?
+
+	IplImage *edge = createBlankCopy(gray);
+	cvCanny(gray, edge, 150, 50);
+
+	CvMemStorage *storage = cvCreateMemStorage(0);
+	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 80, 50, 50);
+	for(int i = 0; i < lines->total; i+=1 )
+    {
+		CvPoint *line = (CvPoint*)cvGetSeqElem(lines, i);
+        cvLine( src, line[0], line[1], cvScalar(0,0,255), 1);
+    }
+
+	cvReleaseImage(&gray);
+	cvReleaseImage(&edge);
+	cvReleaseMemStorage(&storage);
+}
+
+/* Mouse callback wrapper for findBallAround. param is the img to work on */
+void findBallAroundMouse(int event, int x, int y, int flags, void *param) {
 	if(event != CV_EVENT_LBUTTONUP)
 		return;
 
@@ -106,7 +95,7 @@ void mouse_callback(int event, int x, int y, int flags, void *param) {
 	cvMerge(overlay_blank, overlay_blank, overlay_drawing, 0, overlay);
 
 	IplImage *temp = cvCloneImage(img);
-	cvAddWeighted(img, 1, overlay, 0.5, 0, temp);
+	cvAddWeighted(img, 0.5, overlay, 1, 0, temp);
 
 	cvReleaseImage(&overlay);
 	cvReleaseImage(&overlay_drawing);
@@ -282,12 +271,12 @@ void colorThresh(IplImage *src_image, IplImage *dst_mask, CvScalar color,
 }
 
 /* Finds the center and radius of the maximal circle containing the point
-given, and not containing any non-zero point in the given image.
+given, and not containing any out-of-thresh point in the given image.
 
 Works by starting with a little circle around the point given, and tries to
-enlarge it. If it meets any non-zero pixel, it tries to move: left, right, up,
-down, or diagonally and continue growing. When we can't move and not meet a
-non-zero pixel, we're done.*/
+enlarge it. If it meets any out-of-thresh pixel, it tries to move: left, right,
+up, down, or diagonally and continue growing. When we can't move without
+meeting an out-of-thresh pixel, we're done.*/
 void findMaxContainedCircle(IplImage *bw, CvPoint inside, 
 							CvPoint2D32f *f_center, float *f_radius,
 							int thresh) {
