@@ -195,6 +195,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\main.h"
+				>
+			</File>
+			<File
 				RelativePath=".\VideoCapture.h"
 				>
 			</File>
