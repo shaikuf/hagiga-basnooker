@@ -13,51 +13,189 @@ int main(int argc, char* argv[])
 	CvSize size = cvSize(800, 425); // size for screen display
 
 	IplImage *img = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"Picture 33.jpg"); 
+		"Picture 17.jpg"); 
 	normalize(img, crop, size);
 
-	cvNamedWindow("Output", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Output", img);
+	IplImage *templ = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
+		"WhiteBall.jpg");
+	normalize(templ, cvRect(0, 0, 48, 46), cvSize(24, 23));
 
-	// Find ball around mouse
-	/*cvSetMouseCallback("Output", findBallAroundMouse, img);
-	while(1) {
-		if(cvWaitKey(15) == 27)
-			break;
-	}*/
+	//markBall(img, templ);
+	markStick(img);
 
-	//cvWaitKey(0);
-	markStickOnImage(img);
-	cvShowImage("Output", img);
-	cvWaitKey(0);
+	//genericMouseWrapper(img_a, findColorAroundMouse);
+		// cue hue: 21 +- 1
+		// white hue: 27-30
+	//genericMouseWrapper(img, findBallAroundMouse);
+	//genericMouseWrapper(img, findPosAroundMouse);
 
 	cvReleaseImage(&img);
-	cvDestroyWindow("Output");
+	cvReleaseImage(&templ);
 
 	return 0;
 }
 
+/* Finds the point which best matches the template */
+void findTemplate(IplImage *img, IplImage *templ, CvPoint *p) {
+	IplImage *match = cvCreateImage(cvSize(img->width - templ->width + 1,
+		img->height - templ->height + 1), IPL_DEPTH_32F, 1);
+
+	cvMatchTemplate(img, templ, match, CV_TM_SQDIFF_NORMED);
+
+	CvPoint min_p;
+	cvMinMaxLoc(match, 0, 0, &min_p, 0, 0);
+
+	// DEBUG
+	cvNamedWindow("Template matching", CV_WINDOW_AUTOSIZE);
+	IplImage *match_draw = createBlankCopy(match, 3);
+	cvMerge(match, match, match, 0, match_draw);
+	cvCircle(match_draw, min_p, 1, cvScalar(0xff, 0), 2); 
+	cvShowImage("Template matching", match_draw);
+	cvReleaseImage(&match_draw);
+	cvWaitKey(0);
+	cvDestroyWindow("Template matching");
+	// END DEBUG
+
+	cvReleaseImage(&match);
+
+	p->x = min_p.x + (24-1)/2;
+	p->y = min_p.y + (23-1)/2;
+}
+
+/* Mark the ball matching the given template on the image */
+void markBall(IplImage *img, IplImage *templ) {
+	// find the template
+	CvPoint p;
+	findTemplate(img, templ, &p);
+
+	// find the ball parameters
+	CvPoint2D32f center;
+	float radius;
+	findBallAround(img, p, &center, &radius);
+
+	// print an overlay image of the found circle
+	IplImage *overlay = createBlankCopy(img);
+	IplImage *overlay_blank = createBlankCopy(overlay, 1);
+	cvSet(overlay_blank, cvScalar(0));
+	IplImage *overlay_drawing = createBlankCopy(overlay, 1);
+	cvSet(overlay_drawing, cvScalar(0));
+
+	cvCircle(overlay_drawing, cvPoint(cvRound(center.x), cvRound(center.y)),
+		cvRound(radius), cvScalar(0xff), 2);
+    int line_len = 5;
+	cvLine(overlay_drawing, cvPoint(cvRound(center.x)-line_len,
+		cvRound(center.y)), cvPoint(cvRound(center.x)+line_len,
+		cvRound(center.y)), cvScalar(0xff), 1);
+	cvLine(overlay_drawing, cvPoint(cvRound(center.x),
+		cvRound(center.y)-line_len), cvPoint(cvRound(center.x),
+		cvRound(center.y)+line_len), cvScalar(0xff), 1);
+
+	cvMerge(overlay_blank, overlay_blank, overlay_drawing, 0, overlay);
+
+	IplImage *temp = cvCloneImage(img);
+	cvAddWeighted(img, 0.5, overlay, 1, 0, temp);
+
+	cvReleaseImage(&overlay);
+	cvReleaseImage(&overlay_drawing);
+	cvReleaseImage(&overlay_blank);
+
+	cvNamedWindow("Ball", CV_WINDOW_AUTOSIZE);
+	cvShowImage("Ball", temp);
+	cvReleaseImage(&temp);
+
+	cvWaitKey(0);
+	
+	cvDestroyWindow("Ball");
+}
+
+/* Shows an image and forwared clicks on it to the given function until ESC is
+met */
+void genericMouseWrapper(IplImage *img, void (*func)(int, int, int, int, void *)) {
+	cvNamedWindow("MouseWrapper", CV_WINDOW_AUTOSIZE);
+	cvShowImage("MouseWrapper", img);
+
+	cvSetMouseCallback("MouseWrapper", func, img);
+	while(1) {
+		if(cvWaitKey(15) == 27)
+			break;
+	}
+	
+	cvDestroyWindow("MouseWrapper");
+}
+
 /* Finds and marks the cue stick on the image */
-void markStickOnImage(IplImage *src) {
+void markStick(IplImage *src) {
 	IplImage *gray = createBlankCopy(src, 1);
 	cvCvtColor(src, gray, CV_BGR2GRAY);
-
-	// thresh on color?
 
 	IplImage *edge = createBlankCopy(gray);
 	cvCanny(gray, edge, 150, 50);
 
+	// the contour of the board playable area
+	CvMemStorage *mem = cvCreateMemStorage();
+	CvSeqWriter writer;
+	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(30, 33), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(30, 33), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(773, 39), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(799, 62), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(789, 382), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(763, 408), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(34, 393), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(7, 369), writer);
+	CV_WRITE_SEQ_ELEM(cvPoint(6, 56), writer);
+	CvSeq* borders = cvEndWriteSeq(&writer);
+	
 	CvMemStorage *storage = cvCreateMemStorage(0);
 	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 80, 50, 50);
-	for(int i = 0; i < lines->total; i+=1 )
+	cout<<lines->total<<endl;
+	for(int i = 0; i < lines->total; i+=1)
     {
 		CvPoint *line = (CvPoint*)cvGetSeqElem(lines, i);
-        cvLine( src, line[0], line[1], cvScalar(0,0,255), 1);
+		if(cvPointPolygonTest(borders, cvPointTo32f(line[0]), false) > 0 ||
+			cvPointPolygonTest(borders, cvPointTo32f(line[1]), false) > 0)
+			cvLine( src, line[0], line[1], cvScalar(0,0,255), 1);
     }
 
 	cvReleaseImage(&gray);
 	cvReleaseImage(&edge);
 	cvReleaseMemStorage(&storage);
+}
+
+/* Mouse callback wrapper that prints the color of the clicked point. param
+is the img to work on */
+void findColorAroundMouse(int event, int x, int y, int flags, void *param) {
+	if(event != CV_EVENT_LBUTTONUP)
+		return;
+
+	IplImage *img = (IplImage *)param;
+
+	CvScalar color = cvGet2D(img, y, x);
+	for(int i=0; i<img->nChannels; i++) {
+		cout<<color.val[i]<<" ";
+	}
+	cout<<endl;
+
+	IplImage *temp = cvCloneImage(img);
+	cvCircle(temp, cvPoint(x, y), 1, cvScalar(0xff,0,0), 2);
+	cvShowImage("MouseWrapper", temp);
+	cvReleaseImage(&temp);
+}
+
+/* Mouse callback wrapper that prints the position of the clicked point.
+param is the img to work on */
+void findPosAroundMouse(int event, int x, int y, int flags, void *param) {
+	if(event != CV_EVENT_LBUTTONUP)
+		return;
+
+	IplImage *img = (IplImage *)param;
+
+	cout<<"(x,y) = ("<<x<<", "<<y<<")\n";
+
+	IplImage *temp = cvCloneImage(img);
+	cvCircle(temp, cvPoint(x, y), 1, cvScalar(0xff,0,0), 2);
+	cvShowImage("MouseWrapper", temp);
+	cvReleaseImage(&temp);
 }
 
 /* Mouse callback wrapper for findBallAround. param is the img to work on */
@@ -109,7 +247,7 @@ void findBallAroundMouse(int event, int x, int y, int flags, void *param) {
 	cvLine(temp, cvPoint(x, y-5),
 		cvPoint(x, y+5), cvScalar(0xff), 2);*/
 
-	cvShowImage("Output", temp);
+	cvShowImage("MouseWrapper", temp);
 
 	cvReleaseImage(&temp);
 }
@@ -476,10 +614,10 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 		cvPoint(cvRound(center->x), cvRound(center->y)+line_len), cvScalar(0xaa), 2);*/
 
 	// display the channels and the overlayed crop
-	cvNamedWindow("Wnd-2", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-2", grad);
-	cvNamedWindow("Wnd-3", CV_WINDOW_AUTOSIZE);
-	cvShowImage("Wnd-3", cropped);
+	cvNamedWindow("Threshold on Laplacian", CV_WINDOW_AUTOSIZE);
+	cvShowImage("Threshold on Laplacian", grad);
+	cvNamedWindow("Found circle", CV_WINDOW_AUTOSIZE);
+	cvShowImage("Found circle", cropped);
 
 	cvWaitKey(0);
 

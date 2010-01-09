@@ -44,6 +44,24 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 void findBallAroundMouse(int event, int x, int y, int flags, void *param);
 
 /* Finds and marks the cue stick on the image */
-void markStickOnImage(IplImage *src);
+void markStick(IplImage *src);
+
+/* Shows an image and forwared clicks on it to the given function until ESC is
+met */
+void genericMouseWrapper(IplImage *img, void (*func)(int, int, int, int, void *));
+
+/* Mouse callback wrapper that prints the color of the clicked point. param
+is the img to work on */
+void findColorAroundMouse(int event, int x, int y, int flags, void *param);
+
+/* Mouse callback wrapper that prints the position of the clicked point.
+param is the img to work on */
+void findPosAroundMouse(int event, int x, int y, int flags, void *param);
+
+/* Finds the point which best matches the template */
+void findTemplate(IplImage *img, IplImage *templ, CvPoint *p);
+
+/* Mark the ball matching the given template on the image */
+void markBall(IplImage *img, IplImage *templ);
 
 #endif _MAIN_H
