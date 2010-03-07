@@ -180,6 +180,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\calibration.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\camera_interface.cpp"
 				>
 			</File>
@@ -207,6 +211,10 @@
 			>
 			<File
 				RelativePath=".\balls.h"
+				>
+			</File>
+			<File
+				RelativePath=".\calibration.h"
 				>
 			</File>
 			<File

@@ -8,6 +8,9 @@
 #include "cue.h"
 #include "balls.h"
 
+#include "calibration.h"
+#include "camera_interface.h"
+
 using namespace std;
 
 int downscale_factor = 1;
@@ -15,24 +18,22 @@ bool save_images = false;
 
 int main(int argc, char* argv[])
 {
+	//birds_eye();
+	calibration(5, 3, 12, 4.95f, cvSize(1600, 1200));
+	//loopCam();
+	return 0;
+
 	IplImage *img = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"Picture 33.jpg");  //25 30 (32 is good but the way is not) 35 39
+		"Picture 33.jpg");
 
 	IplImage *templ = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
 		"WhiteBall.jpg");
-	//normalize(templ, cvRect(0, 0, 48, 46), cvSize(24, 23));
 
 	CvPoint2D32f p;
 	float radius;
 	findBall(img, templ, &p, &radius, false);
 	markBall(img, templ, false);
 	markCue(img, p, radius);
-
-	//genericMouseWrapper(img_a, findColorAroundMouse);
-		// cue hue: 21 +- 1
-		// white hue: 27-30
-	//genericMouseWrapper(img, findBallAroundMouse);
-	//genericMouseWrapper(img, findPosAroundMouse);
 
 	cvNamedWindow("Final", CV_WINDOW_AUTOSIZE);
 	cvShowImageWrapper("Final", img);
