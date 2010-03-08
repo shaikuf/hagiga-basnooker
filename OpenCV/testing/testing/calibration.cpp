@@ -15,70 +15,8 @@ const int board_dt = 20; //Wait 20 frames per chessboard view
 int board_w;
 int board_h;
 
-void brakha_main(int board_w /*n*/, int board_h /*m*/, int N, CvSize image_sz) {
-	int board_n = board_w * board_h;
-	CvSize board_sz = cvSize( board_w, board_h );
-
-	//ALLOCATE STORAGE
-
-	CvMat* intrinsic_matrix = cvCreateMat(3,3,CV_32FC1);
-	CvMat* distortion_coeffs = cvCreateMat(5,1,CV_32FC1);
-
-	// ==================================================
-	// ==================================================
-
-	CvMat *image_points = (CvMat*)cvLoad("Direct-Image-Points.xml");
-	CvMat *object_points = (CvMat*)cvLoad("Direct-Object-Points.xml");
-	CvMat *point_counts = (CvMat*)cvLoad("Direct-Point-Counts.xml");
-	
-	// CvMat* image_points = cvCreateMat(n_boards*board_n,2,CV_32FC1);
-	// CvMat* object_points = cvCreateMat(n_boards*board_n,3,CV_32FC1);
-	// CvMat* point_counts = cvCreateMat(n_boards,1,CV_32SC1);
-
-	// IMAGE POINTS
-	// a 2x(N*n*m) matrix with the pixels of the corners
-	// first row is x
-	// second row is y
-	// order is from bottom-right to the left and up the rows (i.e (m,n),(m,n-1),...)
-	// (or reversed)
-
-	// OBJECT POINTS
-	// a 3x(N*n*m) matrix with the pixels of the corners
-	// the positions of the given points (x,y,z)
-	// first row is x
-	// second row is y
-	// third row is z (leave z as 0)
-
-	// POINT COUNTS
-	// a 1xN matrix with the number of pixels in each image
-	// (i.e fill with n*m's)
-
-	// ==================================================
-	// ==================================================
-
-	// At this point we have all of the chessboard corners we need.
-	// Initialize the intrinsic matrix such that the two focal
-	// lengths have a ratio of 1.0
-	//
-	CV_MAT_ELEM( *intrinsic_matrix, float, 0, 0 ) = 1.0f;
-	CV_MAT_ELEM( *intrinsic_matrix, float, 1, 1 ) = 1.0f;
-
-	//CALIBRATE THE CAMERA!
-	cvCalibrateCamera2(
-		object_points, image_points,
-		point_counts, image_sz,
-		intrinsic_matrix, distortion_coeffs,
-		NULL, NULL,0 //CV_CALIB_FIX_ASPECT_RATIO
-	);
-
-	// SAVE THE INTRINSICS AND DISTORTIONS
-	cvSave("Direct-Intrinsics.xml",intrinsic_matrix);
-	cvSave("Direct-Distortion.xml",distortion_coeffs);
-}
-
 void calibration(int board_w, int board_h, int n_boards, float square_size,
 				 CvSize resolution) {
-
 
 	int board_n = board_w * board_h;
 	CvSize board_sz = cvSize( board_w, board_h );
@@ -243,7 +181,7 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 // birds-eye board_w board_h instrinics distortion image_file
 // ADJUST VIEW HEIGHT using keys 'u' up, 'd' down. ESC to quit.
 //
-int birds_eye(int argc, char* argv[]) {
+int birds_eye() {
 	//if(argc != 6) return -1;
 
 	// INPUT PARAMETERS:
@@ -260,7 +198,7 @@ int birds_eye(int argc, char* argv[]) {
 	CvMat* distortion = (CvMat*)cvLoad("Distortion.xml");
 	IplImage* image = 0;
 	IplImage* gray_image = 0;
-	if( (image = cvLoadImage("C:\\Documents and Settings\\room110\\My Documents\\My Pictures\\Logitech Webcam\\Picture 1.jpg")) == 0 ) {
+	if( (image = cvLoadImage("C:\\Documents and Settings\\room110\\My Documents\\My Pictures\\Logitech Webcam\\Picture 4.jpg")) == 0 ) {
 		printf("Error: Couldn't load %s\n","photo");
 		return -1;
 	}
@@ -299,9 +237,8 @@ int birds_eye(int argc, char* argv[]) {
 		CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS
 	);
 	if(!found){
-		printf("Couldn't aquire chessboard on %s, "
-			"only found %d of %d corners\n",
-			argv[5],corner_count,board_n
+		printf("Couldn't aquire chessboard. only found %d of %d corners\n",
+			corner_count,board_n
 		);
 		return -1;
 	}

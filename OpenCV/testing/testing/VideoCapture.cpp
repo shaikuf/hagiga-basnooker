@@ -1,3 +1,4 @@
+#include <iostream>
 #include "VideoCapture.h"
 
 VideoCapture::VideoCapture(int index, int w=1600, int h=1200){

@@ -15,29 +15,28 @@ void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 }
 
 /* This uses findBall() and marks the results on the image */
-void markBall(IplImage *img, IplImage *templ, bool circle) {
-	CvPoint2D32f p_32;
-	float radius;
+void markBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
+			  float *radius, bool circle) {
 
-	findBall(img, templ, &p_32, &radius);
+	findBall(img, templ, center, radius);
 
-	CvPoint center = cvPointFrom32f(p_32);
+	CvPoint center_i = cvPointFrom32f(*center);
 
 	// print an overlay image of the found circle
 	IplImage *overlay_drawing = createBlankCopy(img, 1);
 	cvSet(overlay_drawing, cvScalar(0));
 
-	if(circle) {
-		cvCircle(overlay_drawing, cvPoint(cvRound(center.x),
-			cvRound(center.y)),	cvRound(radius), cvScalar(0xff), 2);
+	if(center_i) {
+		cvCircle(overlay_drawing, cvPoint(cvRound(center_i.x),
+			cvRound(center_i.y)),	cvRound(*radius), cvScalar(0xff), 2);
 	}
     int line_len = 5;
-	cvLine(overlay_drawing, cvPoint(cvRound(center.x)-line_len,
-		cvRound(center.y)), cvPoint(cvRound(center.x)+line_len,
-		cvRound(center.y)), cvScalar(0xff), 1);
-	cvLine(overlay_drawing, cvPoint(cvRound(center.x),
-		cvRound(center.y)-line_len), cvPoint(cvRound(center.x),
-		cvRound(center.y)+line_len), cvScalar(0xff), 1);
+	cvLine(overlay_drawing, cvPoint(cvRound(center_i.x)-line_len,
+		cvRound(center_i.y)), cvPoint(cvRound(center_i.x)+line_len,
+		cvRound(center_i.y)), cvScalar(0xff), 1);
+	cvLine(overlay_drawing, cvPoint(cvRound(center_i.x),
+		cvRound(center_i.y)-line_len), cvPoint(cvRound(center_i.x),
+		cvRound(center_i.y)+line_len), cvScalar(0xff), 1);
 
 	/*IplImage *overlay = createBlankCopy(overlay_drawing, 3);
 	IplImage *overlay_blank = createBlankCopy(overlay, 1);

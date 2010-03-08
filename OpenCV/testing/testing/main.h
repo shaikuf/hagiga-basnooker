@@ -16,4 +16,7 @@ void findPosAroundMouse(int event, int x, int y, int flags, void *param);
 /* Mouse callback wrapper for findBallAround. param is the img to work on */
 void findBallAroundMouse(int event, int x, int y, int flags, void *param);
 
+/* The main loop of the program */
+void gameLoop();
+
 #endif _MAIN_H

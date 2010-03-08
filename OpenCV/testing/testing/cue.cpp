@@ -178,22 +178,21 @@ void meanCM(CvSeq *lines, CvPoint *dst_cm) {
 
 /* This uses findCue() and marks the results on the image (around the white
 ball) */
-void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius) {
-	double cue_m;
-	CvPoint cue_cm;
-	findCue(src, &cue_m, &cue_cm);
+void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
+			 double *cue_m, CvPoint *cue_cm) {
+	findCue(src, cue_m, cue_cm);
 
-	if(cue_cm.x == 0 && cue_cm.y == 0)
+	if(cue_cm->x == 0 && cue_cm->y == 0)
 		return;
 	
-	int cue_sign = (int)(fabs(cue_m)/cue_m);
-	cue_m = fabs(cue_m);
+	int cue_sign = (int)(fabs(*cue_m)/(*cue_m));
+	*cue_m = fabs(*cue_m);
 
 	double length = 100;
 	CvPoint p1, p2;
 
 	int x_sign = 1;
-	if(cue_cm.x < white_center.x) {
+	if(cue_cm->x < white_center.x) {
 		// if we're pointing from the left of the ball
 		x_sign = -1;
 	}
@@ -203,8 +202,8 @@ void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius) {
 	p1.x = cvRound(white_center.x + x_sign*(white_radius/sqrt(cue_m+1)));
 	p1.y = cvRound(white_center.y + y_sign*(p1.x - white_center.x)*cue_m);
 
-	p2.x = p1.x + x_sign*cvRound(length/sqrt(cue_m+1));
-	p2.y = p1.y + y_sign*cvRound((p2.x-p1.x)*cue_m);
+	p2.x = p1.x + x_sign*cvRound(length/sqrt(*cue_m+1));
+	p2.y = p1.y + y_sign*cvRound((p2.x-p1.x)*(*cue_m));
 
 	cvLine(src, p1, p2, cvScalar(255, 0, 0), 3);
 }

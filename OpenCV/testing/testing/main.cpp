@@ -7,9 +7,9 @@
 #include "misc.h"
 #include "cue.h"
 #include "balls.h"
-
 #include "calibration.h"
 #include "camera_interface.h"
+#include "VideoCapture.h"
 
 using namespace std;
 
@@ -18,30 +18,16 @@ bool save_images = false;
 
 int main(int argc, char* argv[])
 {
-	//birds_eye();
-	calibration(5, 3, 12, 4.95f, cvSize(1600, 1200));
-	//loopCam();
+
+	birds_eye();
 	return 0;
+	bool calibrate = false;
 
-	IplImage *img = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"Picture 33.jpg");
-
-	IplImage *templ = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"WhiteBall.jpg");
-
-	CvPoint2D32f p;
-	float radius;
-	findBall(img, templ, &p, &radius, false);
-	markBall(img, templ, false);
-	markCue(img, p, radius);
-
-	cvNamedWindow("Final", CV_WINDOW_AUTOSIZE);
-	cvShowImageWrapper("Final", img);
-	cvWaitKey(0);
-	cvDestroyWindow("Final");
-
-	cvReleaseImage(&img);
-	cvReleaseImage(&templ);
+	if(calibrate) {
+		calibration(5, 3, 12, 4.95f, cvSize(1600, 1200));
+	} else {
+		gameLoop();
+	}
 
 	return 0;
 }
@@ -151,4 +137,37 @@ void findBallAroundMouse(int event, int x, int y, int flags, void *param) {
 	cvReleaseImage(&temp);
 }
 
+/* The main loop of the program */
+void gameLoop() {
+	IplImage *white_templ = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
+		"WhiteBall.jpg");
 
+	VideoCapture capture(0, 1600, 1200);
+	IplImage *image = capture.CreateCaptureImage();
+	
+	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
+
+	bool find_white = false;
+	CvPoint2D32f white_center;
+	float white_radius;
+
+
+	// find balls for the first time
+	capture.waitFrame(image);
+	markBall(image, white_temp, &white_center, &white_radius, false);
+
+
+	// main loop
+	while(1) {
+		capture.waitFrame(image);
+		
+		//markCue(img, p, radius);
+
+		cvShowImage("Game", image);
+	}
+
+	cvDestroyWindow("Game");
+
+	cvReleaseImage(&image);
+	cvReleaseImage(&white_templ);
+}
