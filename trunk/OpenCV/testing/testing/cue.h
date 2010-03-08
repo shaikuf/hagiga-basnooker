@@ -5,7 +5,8 @@
 
 /* This uses findCue() and marks the results on the image (around the white
 ball) */
-void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius);
+void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
+			 double *cue_m, CvPoint *cue_cm);
 
 /* This finds the center-of-mass and slope of the cue in the given image */
 void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm);

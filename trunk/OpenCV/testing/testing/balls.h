@@ -24,6 +24,7 @@ void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 			  float *radius, bool debug = true);
 
 /* This uses findBall() and marks the results on the image */
-void markBall(IplImage *img, IplImage *templ, bool circle = true);
+void markBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
+			  float *radius, bool circle = true);
 
 #endif
