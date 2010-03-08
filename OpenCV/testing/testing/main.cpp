@@ -147,7 +147,8 @@ void gameLoop() {
 	
 	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
 
-	bool find_white = false;
+	bool find_white = false; //tells weather the balls moved & we 
+							//need to find the ball again
 	CvPoint2D32f white_center;
 	float white_radius;
 
@@ -155,13 +156,22 @@ void gameLoop() {
 	// find balls for the first time
 	capture.waitFrame(image);
 	markBall(image, white_templ, &white_center, &white_radius, false);
+	find_white = true;
+
+	double cue_slope;
+	CvPoint cue_cm;
 
 
 	// main loop
 	while(1) {
 		capture.waitFrame(image);
-		
-		//markCue(img, p, radius);
+
+		//do we need to find the balls?
+		if(!find_white)
+			markBall(image,white_templ, &white_center, &white_radius, false);
+			//what is the 'false' flag in the end do? -----------------------------------
+
+		markCue(image, white_center, white_radius, &cue_slope, &cue_cm);
 
 		cvShowImage("Game", image);
 	}
