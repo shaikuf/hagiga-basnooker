@@ -154,7 +154,7 @@ void gameLoop() {
 
 	// find balls for the first time
 	capture.waitFrame(image);
-	markBall(image, white_temp, &white_center, &white_radius, false);
+	markBall(image, white_templ, &white_center, &white_radius, false);
 
 
 	// main loop

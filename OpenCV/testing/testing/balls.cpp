@@ -27,8 +27,8 @@ void markBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 	cvSet(overlay_drawing, cvScalar(0));
 
 	if(center_i) {
-		cvCircle(overlay_drawing, cvPoint(cvRound(center_i.x),
-			cvRound(center_i.y)),	cvRound(*radius), cvScalar(0xff), 2);
+		cvCircle(overlay_drawing, cvPoint(cvRound(center_i.x),cvRound(center_i.y)),
+			cvRound(*radius), cvScalar(0xff), 2);
 	}
     int line_len = 5;
 	cvLine(overlay_drawing, cvPoint(cvRound(center_i.x)-line_len,
