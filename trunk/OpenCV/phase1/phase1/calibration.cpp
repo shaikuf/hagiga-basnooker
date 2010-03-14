@@ -8,6 +8,8 @@
 #include <highgui.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "calibration.h"
+#include "balls.h"
 #include "VideoCapture.h"
 
 /* this handles computation of the distortion matrices of the camera */
@@ -327,6 +329,7 @@ void birds_eye(int board_w, int board_h, CvSize resolution) {
 	cvSave("H.xml",H); //We can reuse H for the same camera mounting
 }
 
+/* this lets the user click on balls and save them as templates */
 void grab_templates(CvSize resolution) {
 	// init camera
 	VideoCapture capture(0, resolution.width, resolution.height);
@@ -350,9 +353,9 @@ void grab_templates(CvSize resolution) {
 	);
 
 	// initializations
-	cvSetMouseCallback("Templates Grabber", saveTemplateAroundMouse, (void *)image);
-	
+	cvSetMouseCallback("Templates Grabber", &saveTemplateAroundMouse, image);
 
+	// loop
 	char c=0;
 	while(c != 'q') {
 		capture.waitFrame(pre_image); // capture frame
@@ -370,7 +373,8 @@ void grab_templates(CvSize resolution) {
 	cvReleaseImage(&pre_image);
 }
 
-/* Mouse callback wrapper for findBallAround. param is the img to work on */
+/* mouse callback wrapper for finding a ball around the mouse and saving it
+as a template */
 void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	if(event != CV_EVENT_LBUTTONUP)
 		return;
@@ -384,10 +388,28 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	findBallAround(img, cvPoint(x,y), &center, &radius);
 
 	// crop template
-	cvSetImageROI
+	int crop_size = cvRound(radius) + 5;
+	CvRect crop_rect = cvRect(	MAX(cvRound(center.x - crop_size), 0),
+		MAX(cvRound(center.y - crop_size), 0), 2*crop_size, 2*crop_size);
+	cvSetImageROI(img, crop_rect);
 
 	// save template
+	int opt_count = 2;
+	char *names[] = {"White", "Red"};
+	char *filenames[] = {"white-templ.jpg", "red-templ.jpg"};
 
-	char *names = {"White", "Red"};
-	char *filenames = {"white-templ.jpg", "red-templ.jpg"};
+	printf("Which ball is it?\n");
+	int i;
+	for(i = 0; i < opt_count; i++) {
+		printf("%d. %s\n", i, names[i]);
+	}
+
+	int choice;
+	scanf("%d", &choice);
+	while(choice<0 || choice>=opt_count)
+		scanf("%d", &choice);
+
+	printf("Saved as %s\n", filenames[choice]);
+
+	cvSaveImage(filenames[choice], img);
 }

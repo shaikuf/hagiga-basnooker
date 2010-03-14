@@ -27,4 +27,12 @@ CvSeq *tableBorders(CvMemStorage *mem);
 /* This finds and draws the borders of the table */
 void drawBorders(IplImage *dst, int width);
 
+/* This resizes images before showing them (and possibly saves to a file)
+so that they would fit on the screen */
+void cvShowImageWrapper(const char *name, IplImage *image);
+
+/* Normalize the image for debugging, so it could fit on the screen. */
+void normalize(IplImage* &img, CvRect crop, CvSize size);
+
+
 #endif

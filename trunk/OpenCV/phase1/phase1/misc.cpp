@@ -123,3 +123,49 @@ IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
 	return cvCreateImage(cvGetSize(src), depth, channels);
 }
 
+/* This resizes images before showing them (and possibly saves to a file)
+so that they would fit on the screen */
+void cvShowImageWrapper(const char *name, IplImage *image) {
+	if(save_images) {
+		char filename[1024];
+		static int num = 0;
+		sprintf(filename, "C:\\Projecton\\Test\\Results\\%d.jpg", num);
+		num++;
+		IplImage *copy = createBlankCopy(image, image->nChannels, IPL_DEPTH_8U);
+		cvConvertImage(image, copy);
+		cvSaveImage(filename, copy);
+		cvReleaseImage(&copy);
+	}
+
+	CvRect crop;
+	CvSize size;
+
+
+	if(cvGetSize(image).width == 1600 && cvGetSize(image).height == 1200) {
+		crop = cvRect(0, 0, 1600, 850);
+		size = cvSize(800, 425);
+	} else if(cvGetSize(image).width == 1553 && cvGetSize(image).height == 1155) {
+		crop = cvRect(0, 0, 1550, 1150);
+		size = cvSize(775, 575);
+	} else if(cvGetSize(image).width == 1553 && cvGetSize(image).height == 805) {
+		crop = cvRect(0, 0, 1550, 800);
+		size = cvSize(775, 400);
+	} else {
+		cvShowImage(name, image);
+		return;
+	}
+
+	IplImage *temp = cvCloneImage(image);
+	normalize(temp, crop, size);
+	cvShowImage(name, temp);
+	cvReleaseImage(&temp);
+}
+
+/* Normalize the image for debugging, so it could fit on the screen. */
+void normalize(IplImage* &img, CvRect crop, CvSize size) {
+	cvSetImageROI(img, crop);
+	IplImage *img_new = cvCreateImage(size, img->depth, img->nChannels);
+	cvPyrDown(img, img_new);
+	cvReleaseImage(&img);
+	img = img_new;
+}
