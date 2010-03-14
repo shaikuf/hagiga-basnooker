@@ -50,7 +50,7 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 			capture.waitFrame(image);
 			cvShowImage("Live View",image);
 			c=cvWaitKey(1);
-		}	
+		}
 
 		//==============
 		//Find chessboard corners:
@@ -137,21 +137,18 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 	cvSave("Intrinsics.xml",intrinsic_matrix);
 	cvSave("Distortion.xml",distortion_coeffs);
 
-	// EXAMPLE OF LOADING THESE MATRICES BACK IN:
-	CvMat *intrinsic = (CvMat*)cvLoad("Intrinsics.xml");
-	CvMat *distortion = (CvMat*)cvLoad("Distortion.xml");
-
 	// Build the undistort map that we will use for all
 	// subsequent frames.
 	//
 	IplImage* mapx = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
 	IplImage* mapy = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
 	cvInitUndistortMap(
-		intrinsic,
-		distortion,
+		intrinsic_matrix,
+		distortion_coeffs,
 		mapx,
 		mapy
 	);
+
 	// Just run the camera to the screen, now showing the raw and
 	// the undistorted image.
 	//
@@ -177,31 +174,37 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 	}
 }
 
-//Call:
-// birds-eye board_w board_h instrinics distortion image_file
-// ADJUST VIEW HEIGHT using keys 'u' up, 'd' down. ESC to quit.
-//
-int birds_eye() {
-	//if(argc != 6) return -1;
-
+void birds_eye(int board_w, int board_h, CvSize resolution) {
 	// INPUT PARAMETERS:
 	//
-	//board_w = atoi(argv[1]);
 	board_w = 5;
-	//board_h = atoi(argv[2]);
 	board_h = 3;
 	int board_n = board_w * board_h;
+
 	CvSize board_sz = cvSize( board_w, board_h );
-	//CvMat* intrinsic = (CvMat*)cvLoad(argv[3]);
+
 	CvMat* intrinsic = (CvMat*)cvLoad("Intrinsics.xml");
-	//CvMat* distortion = (CvMat*)cvLoad(argv[4]);
 	CvMat* distortion = (CvMat*)cvLoad("Distortion.xml");
+
 	IplImage* image = 0;
 	IplImage* gray_image = 0;
-	if( (image = cvLoadImage("C:\\Documents and Settings\\room110\\My Documents\\My Pictures\\Logitech Webcam\\Picture 4.jpg")) == 0 ) {
-		printf("Error: Couldn't load %s\n","photo");
-		return -1;
+
+	// CAPTURE IMAGE
+	//
+	VideoCapture capture(0,resolution.width,resolution.height);
+	image = capture.CreateCaptureImage();
+
+	cvNamedWindow("Live View");
+	char c = 0;
+	while(c!='c'){
+		capture.waitFrame(image);
+		cvShowImage("Live View",image);
+		c=cvWaitKey(1);
 	}
+
+	capture.stop();
+	cvDestroyWindow("Live View");
+
 	gray_image = cvCreateImage( cvGetSize(image), 8, 1 );
 	cvCvtColor(image, gray_image, CV_BGR2GRAY );
 
@@ -240,7 +243,7 @@ int birds_eye() {
 		printf("Couldn't aquire chessboard. only found %d of %d corners\n",
 			corner_count,board_n
 		);
-		return -1;
+		return;
 	}
 	//Get Subpixel accuracy on those corners:
 	cvFindCornerSubPix(
@@ -318,12 +321,76 @@ int birds_eye() {
 			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS
 		);
 		cvShowImage( "Birds_Eye", birds_image );
-		printf("showed\n");
+
 		key = cvWaitKey();
 		if(key == 'u') Z += 0.5;
 		if(key == 'd') Z -= 0.5;
 	}
 
 	cvSave("H.xml",H); //We can reuse H for the same camera mounting
-	return 0;
+}
+
+void grab_templates(CvSize resolution) {
+	// init camera
+	VideoCapture capture(0, resolution.width, resolution.height);
+	IplImage *pre_image = capture.CreateCaptureImage();
+	IplImage *image = capture.CreateCaptureImage();
+
+	cvNamedWindow("Templates Grabber", CV_WINDOW_AUTOSIZE);
+
+	// load data from files
+	CvMat* intrinsic = (CvMat*)cvLoad("Intrinsics.xml");
+	CvMat* distortion = (CvMat*)cvLoad("Distortion.xml");
+	CvMat* H = (CvMat*)cvLoad("H.xml");
+
+	IplImage* mapx = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
+	IplImage* mapy = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
+	cvInitUndistortMap(
+		intrinsic,
+		distortion,
+		mapx,
+		mapy
+	);
+
+	// initializations
+	cvSetMouseCallback("Templates Grabber", saveTemplateAroundMouse, (void *)image);
+	
+
+	char c=0;
+	while(c != 'q') {
+		capture.waitFrame(pre_image); // capture frame
+		cvWarpPerspective(pre_image, image,	H,
+			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+
+		cvShowImage("Templates Grabber", image);
+		c=cvWaitKey(1);
+	}
+
+	capture.stop();
+	cvDestroyWindow("Templates Grabber");
+
+	cvReleaseImage(&image);
+	cvReleaseImage(&pre_image);
+}
+
+/* Mouse callback wrapper for findBallAround. param is the img to work on */
+void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
+	if(event != CV_EVENT_LBUTTONUP)
+		return;
+
+	IplImage *img = (IplImage *)param;
+
+	// find the ball parameters
+	CvPoint2D32f center;
+	float radius;
+
+	findBallAround(img, cvPoint(x,y), &center, &radius);
+
+	// crop template
+	cvSetImageROI
+
+	// save template
+
+	char *names = {"White", "Red"};
+	char *filenames = {"white-templ.jpg", "red-templ.jpg"};
 }

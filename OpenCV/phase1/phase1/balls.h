@@ -23,8 +23,8 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 			  float *radius, bool debug = true);
 
-/* This uses findBall() and marks the results on the image */
-void markBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
-			  float *radius, bool circle = true);
+/* This marks the ball on the image */
+void markBall(IplImage *img, CvPoint2D32f center, float radius,
+			  bool circle = true);
 
 #endif
