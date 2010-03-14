@@ -56,8 +56,14 @@ void gameLoop(CvSize resolution) {
 	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
 
 	// load data from files
-	IplImage *white_templ = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"WhiteBall.jpg");
+	int opt_count = 2;
+	IplImage *templates[2];
+	char *filenames[] = {"white-templ.jpg", "red-templ.jpg"};
+
+	int i;
+	for(i=0; i<opt_count; i++) {
+		templates[i] = cvLoadImage(filenames[i]);
+	}
 
 	CvMat* intrinsic = (CvMat*)cvLoad("Intrinsics.xml");
 	CvMat* distortion = (CvMat*)cvLoad("Distortion.xml");
@@ -77,7 +83,6 @@ void gameLoop(CvSize resolution) {
 	CvPoint2D32f white_center;
 	float white_radius;
 
-
 	// main loop
 	// markBall(image, white_templ, &white_center, &white_radius, false);
 
@@ -88,7 +93,7 @@ void gameLoop(CvSize resolution) {
 			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
 
 		if(find_balls) {
-			findBall(image, white_templ, &white_center, &white_radius, true);
+			findBall(image, templates[0], &white_center, &white_radius, true);
 			find_balls = false;
 		}
 
