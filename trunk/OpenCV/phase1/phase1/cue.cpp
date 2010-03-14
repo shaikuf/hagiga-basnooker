@@ -199,8 +199,8 @@ void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 	int y_sign = cue_sign;
 
 	white_radius = white_radius + 5*downscale_factor;
-	p1.x = cvRound(white_center.x + x_sign*(white_radius/sqrt(cue_m+1)));
-	p1.y = cvRound(white_center.y + y_sign*(p1.x - white_center.x)*cue_m);
+	p1.x = cvRound(white_center.x + x_sign*(white_radius/sqrt(*cue_m+1)));
+	p1.y = cvRound(white_center.y + y_sign*(p1.x - white_center.x)*(*cue_m));
 
 	p2.x = p1.x + x_sign*cvRound(length/sqrt(*cue_m+1));
 	p2.y = p1.y + y_sign*cvRound((p2.x-p1.x)*(*cue_m));

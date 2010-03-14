@@ -17,6 +17,6 @@ void findPosAroundMouse(int event, int x, int y, int flags, void *param);
 void findBallAroundMouse(int event, int x, int y, int flags, void *param);
 
 /* The main loop of the program */
-void gameLoop();
+void gameLoop(CvSize resolution);
 
 #endif _MAIN_H
