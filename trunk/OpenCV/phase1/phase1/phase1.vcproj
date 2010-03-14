@@ -184,10 +184,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\camera_interface.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\cue.cpp"
 				>
 			</File>
@@ -215,10 +211,6 @@
 			</File>
 			<File
 				RelativePath=".\calibration.h"
-				>
-			</File>
-			<File
-				RelativePath=".\camera_interface.h"
 				>
 			</File>
 			<File
