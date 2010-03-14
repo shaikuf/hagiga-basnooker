@@ -2,44 +2,6 @@
 #include <highgui.h>
 #include "misc.h"
 
-/* This resizes images before showing them (and possibly saves to a file)
-so that they would fit on the screen */
-void cvShowImageWrapper(const char *name, IplImage *image) {
-	if(save_images) {
-		char filename[1024];
-		static int num = 0;
-		sprintf(filename, "C:\\Projecton\\Test\\Results\\%d.jpg", num);
-		num++;
-		IplImage *copy = createBlankCopy(image, image->nChannels, IPL_DEPTH_8U);
-		cvConvertImage(image, copy);
-		cvSaveImage(filename, copy);
-		cvReleaseImage(&copy);
-	}
-
-	CvRect crop;
-	CvSize size;
-
-
-	if(cvGetSize(image).width == 1600 && cvGetSize(image).height == 1200) {
-		crop = cvRect(0, 0, 1600, 850);
-		size = cvSize(800, 425);
-	} else if(cvGetSize(image).width == 1553 && cvGetSize(image).height == 1155) {
-		crop = cvRect(0, 0, 1550, 1150);
-		size = cvSize(775, 575);
-	} else if(cvGetSize(image).width == 1553 && cvGetSize(image).height == 805) {
-		crop = cvRect(0, 0, 1550, 800);
-		size = cvSize(775, 400);
-	} else {
-		cvShowImage(name, image);
-		return;
-	}
-
-	IplImage *temp = cvCloneImage(image);
-	normalize(temp, crop, size);
-	cvShowImage(name, temp);
-	cvReleaseImage(&temp);
-}
-
 /* Finds the point which best matches the template */
 void findTemplate(IplImage *img, IplImage *templ, CvPoint *p, bool debug) {
 	CvSize img_s = cvGetSize(img);
@@ -150,25 +112,6 @@ void drawHistogram(char *name, CvHistogram *hist, int nbins) {
 	cvReleaseImage(&histImage);
 }
 
-/* Get the background from multiple background files and avergage them */
-IplImage* getBackground() {
-	IplImage *src1 = cvLoadImage("C:\\Projecton\\Test\\Testing\\bg1.jpg");
-	IplImage *src2 = cvLoadImage("C:\\Projecton\\Test\\Testing\\bg1.jpg");
-	IplImage *src3 = cvLoadImage("C:\\Projecton\\Test\\Testing\\bg1.jpg");
-
-	IplImage *bg = cvCreateImage(cvGetSize(src1), src1->depth,
-		src1->nChannels);
-
-	cvAddWeighted(src1, 1./2., src2, 1./2., 0., bg);
-	cvAddWeighted(bg, 2./3., src3, 1./3., 0., bg);
-
-	cvReleaseImage(&src1);
-	cvReleaseImage(&src2);
-	cvReleaseImage(&src3);
-
-	return bg;
-}
-
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */
 IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
@@ -180,83 +123,3 @@ IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
 	return cvCreateImage(cvGetSize(src), depth, channels);
 }
 
-/* Normalize the image for debugging, so it could fit on the screen. */
-void normalize(IplImage* &img, CvRect crop, CvSize size) {
-	cvSetImageROI(img, crop);
-	IplImage *img_new = cvCreateImage(size, img->depth, img->nChannels);
-	cvPyrDown(img, img_new);
-	cvReleaseImage(&img);
-	img = img_new;
-}
-
-/* Set the channels a,b,c of src to:
-a/(a+b+c), b/(a+b+c), c/(a+b+c).
-This essentially normalizes the brightness and contrast, against global
-lighting changes.*/
-void equalize(IplImage *src, IplImage *dst) {
-	IplImage *a = createBlankCopy(src, 1, IPL_DEPTH_8U);
-	IplImage *b = createBlankCopy(src, 1, IPL_DEPTH_8U);
-	IplImage *c = createBlankCopy(src, 1, IPL_DEPTH_8U);
-
-	cvSplit(src, a, b, c, NULL);
-
-	IplImage *tmp = createBlankCopy(src, 1, IPL_DEPTH_16U);
-	IplImage *sum = createBlankCopy(src, 1, IPL_DEPTH_16U);
-
-	cvConvertScale(a, sum);
-	cvConvertScale(b, tmp);
-	cvAddWeighted(sum, 1./3., tmp, 1./3., 0., sum);
-	cvConvertScale(c, tmp);
-	cvAddWeighted(sum, 1, tmp, 1./3., 0., sum);
-
-	cvDiv(tmp, sum, tmp, 255);
-	cvConvertScale(tmp, c);
-
-	cvConvertScale(b, tmp);
-	cvDiv(tmp, sum, tmp, 255);
-	cvConvertScale(tmp, b);
-
-	cvConvertScale(a, tmp);
-	cvDiv(tmp, sum, tmp, 255);
-	cvConvertScale(tmp, a);
-
-	cvReleaseImage(&a);
-	cvReleaseImage(&b);
-	cvReleaseImage(&c);
-	cvReleaseImage(&tmp);
-	cvReleaseImage(&sum);
-
-	cvMerge(a, b, c, NULL, dst);
-}
-
-/* Compute a mask according to a threshold on the difference from a certain
-color (thresh may be different for each channel) */
-void colorThresh(IplImage *src_image, IplImage *dst_mask, CvScalar color, 
-                                 CvScalar thresh) {
-        int i;
-        int n_channels = src_image->nChannels;
-
-        // compute difference
-        IplImage *tmp = cvCreateImage(cvGetSize(src_image), src_image->depth, 
-                src_image->nChannels);
-        cvAbsDiffS(src_image, tmp, color);
-        
-        // split to channels
-        IplImage *channels[4] = {NULL, NULL, NULL, NULL};
-        for(i=0; i<n_channels; i++) {
-                channels[i] = cvCreateImage(cvGetSize(tmp), tmp->depth, 1);
-        }
-        cvSplit(tmp, channels[0], channels[1], channels[2], channels[3]);
-        cvReleaseImage(&tmp);
-
-        // zero the mask
-        cvSet(dst_mask, cvScalar(1));
-
-        // threshold every channel and merge the thresholds
-        for(i=0; i<n_channels; i++) {
-                cvThreshold(channels[i], channels[i], thresh.val[i], 1,
-					CV_THRESH_BINARY);
-                cvMul(channels[i], dst_mask, dst_mask);
-                cvReleaseImage(&channels[i]);
-        }
-}

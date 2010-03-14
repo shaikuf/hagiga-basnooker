@@ -10,11 +10,7 @@
 #include <stdlib.h>
 #include "VideoCapture.h"
 
-int n_boards = 0; //Will be set by input list
-const int board_dt = 20; //Wait 20 frames per chessboard view
-int board_w;
-int board_h;
-
+/* this handles computation of the distortion matrices of the camera */
 void calibration(int board_w, int board_h, int n_boards, float square_size,
 				 CvSize resolution) {
 
@@ -174,6 +170,7 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 	}
 }
 
+/* this handles generation of perspective wrapping matrix */
 void birds_eye(int board_w, int board_h, CvSize resolution) {
 	// INPUT PARAMETERS:
 	//
