@@ -3,13 +3,13 @@
 
 /* this handles computation of the distortion matrices of the camera */
 void calibration(int board_w, int board_h, int n_boards, float square_size,
-				 CvSize resolution);
+				 CvSize resolution, int device_id);
 
 /* this handles generation of perspective wrapping matrix */
-void birds_eye(int board_w, int board_h, CvSize resolution);
+void birds_eye(int board_w, int board_h, CvSize resolution, int device_id);
 
 /* this lets the user click on balls and save them as templates */
-void grab_templates(CvSize resolution);
+void grab_templates(CvSize resolution, int device_id);
 
 /* mouse callback wrapper for finding a ball around the mouse and saving it
 as a template */
