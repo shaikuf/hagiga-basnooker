@@ -129,7 +129,7 @@ void cvShowImageWrapper(const char *name, IplImage *image) {
 	if(save_images) {
 		char filename[1024];
 		static int num = 0;
-		sprintf(filename, "C:\\Projecton\\Test\\Results\\%d.jpg", num);
+		_snprintf_s(filename, 1024, "C:\\Projecton\\Test\\Results\\%d.jpg", num);
 		num++;
 		IplImage *copy = createBlankCopy(image, image->nChannels, IPL_DEPTH_8U);
 		cvConvertImage(image, copy);

@@ -31,16 +31,16 @@ int main(int argc, char* argv[])
 
 	if(mode == 2) {
 		// calibrate camera
-		calibration(5, 3, 12, 4.95f, resolution);
+		calibration(5, 3, 12, 4.95f, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
-		birds_eye(5, 3, resolution);
+		birds_eye(5, 3, resolution, 0);
 	} else if(mode == 0) {
 		// main loop
 		gameLoop(resolution);
 	} else if(mode == 3) {
 		// grab templates
-		grab_templates(resolution);
+		grab_templates(resolution, 0);
 	}
 
 	return 0;
@@ -49,25 +49,30 @@ int main(int argc, char* argv[])
 /* The main loop of the program */
 void gameLoop(CvSize resolution) {
 	// init camera
-	VideoCapture capture(0, resolution.width, resolution.height);
+	int device_id = 0;
+
+	VideoCapture capture(device_id, resolution.width, resolution.height);
 	IplImage *pre_image = capture.CreateCaptureImage();
 	IplImage *image = capture.CreateCaptureImage();
 
 	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
 
 	// load data from files
-	int opt_count = 2;
+	int opt_count = 1;
 	IplImage *templates[2];
 	char *filenames[] = {"white-templ.jpg", "red-templ.jpg"};
 
 	int i;
-	for(i=0; i<opt_count; i++) {
+	for(i=0; i<opt_count; i++)
 		templates[i] = cvLoadImage(filenames[i]);
-	}
 
-	CvMat* intrinsic = (CvMat*)cvLoad("Intrinsics.xml");
-	CvMat* distortion = (CvMat*)cvLoad("Distortion.xml");
-	CvMat* H = (CvMat*)cvLoad("H.xml");
+	char filename[100];
+	_snprintf_s(filename, 100, "Intrinsics-%d.xml", device_id);
+	CvMat* intrinsic = (CvMat*)cvLoad(filename);
+	_snprintf_s(filename, 100, "Distortion-%d.xml", device_id);
+	CvMat* distortion = (CvMat*)cvLoad(filename);
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	CvMat* H = (CvMat*)cvLoad(filename);
 
 	IplImage* mapx = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
 	IplImage* mapy = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
@@ -107,5 +112,6 @@ void gameLoop(CvSize resolution) {
 	cvDestroyWindow("Game");
 
 	cvReleaseImage(&image);
-	cvReleaseImage(&white_templ);
+	for(i=0; i<opt_count; i++)
+		cvReleaseImage(&templates[i]);
 }

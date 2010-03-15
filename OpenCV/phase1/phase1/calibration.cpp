@@ -14,12 +14,12 @@
 
 /* this handles computation of the distortion matrices of the camera */
 void calibration(int board_w, int board_h, int n_boards, float square_size,
-				 CvSize resolution) {
+				 CvSize resolution, int device_id) {
 
 	int board_n = board_w * board_h;
 	CvSize board_sz = cvSize( board_w, board_h );
 
-	VideoCapture capture(0,resolution.width,resolution.height);
+	VideoCapture capture(device_id,resolution.width,resolution.height);
 	IplImage *image = capture.CreateCaptureImage();
 
 	cvNamedWindow( "Calibration" );
@@ -132,8 +132,11 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 	);
 
 	// SAVE THE INTRINSICS AND DISTORTIONS
-	cvSave("Intrinsics.xml",intrinsic_matrix);
-	cvSave("Distortion.xml",distortion_coeffs);
+	char filename[100];
+	_snprintf_s(filename, 100, "Intrinsics-%d.xml", device_id);
+	cvSave(filename,intrinsic_matrix);
+	_snprintf_s(filename, 100, "Distortion-%d.xml", device_id);
+	cvSave(filename,distortion_coeffs);
 
 	// Build the undistort map that we will use for all
 	// subsequent frames.
@@ -173,7 +176,7 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 }
 
 /* this handles generation of perspective wrapping matrix */
-void birds_eye(int board_w, int board_h, CvSize resolution) {
+void birds_eye(int board_w, int board_h, CvSize resolution, int device_id) {
 	// INPUT PARAMETERS:
 	//
 	board_w = 5;
@@ -182,15 +185,18 @@ void birds_eye(int board_w, int board_h, CvSize resolution) {
 
 	CvSize board_sz = cvSize( board_w, board_h );
 
-	CvMat* intrinsic = (CvMat*)cvLoad("Intrinsics.xml");
-	CvMat* distortion = (CvMat*)cvLoad("Distortion.xml");
+	char filename[100];
+	_snprintf_s(filename, 100, "Intrinsics-%d.xml", device_id);
+	CvMat* intrinsic = (CvMat*)cvLoad(filename);
+	_snprintf_s(filename, 100, "Distortion-%d.xml", device_id);
+	CvMat* distortion = (CvMat*)cvLoad(filename);
 
 	IplImage* image = 0;
 	IplImage* gray_image = 0;
 
 	// CAPTURE IMAGE
 	//
-	VideoCapture capture(0,resolution.width,resolution.height);
+	VideoCapture capture(device_id,resolution.width,resolution.height);
 	image = capture.CreateCaptureImage();
 
 	cvNamedWindow("Live View");
@@ -326,11 +332,14 @@ void birds_eye(int board_w, int board_h, CvSize resolution) {
 		if(key == 'd') Z -= 0.5;
 	}
 
-	cvSave("H.xml",H); //We can reuse H for the same camera mounting
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	cvSave(filename,H); //We can reuse H for the same camera mounting
 }
 
+bool took_template = false;
+
 /* this lets the user click on balls and save them as templates */
-void grab_templates(CvSize resolution) {
+void grab_templates(CvSize resolution, int device_id) {
 	// init camera
 	VideoCapture capture(0, resolution.width, resolution.height);
 	IplImage *pre_image = capture.CreateCaptureImage();
@@ -339,9 +348,13 @@ void grab_templates(CvSize resolution) {
 	cvNamedWindow("Templates Grabber", CV_WINDOW_AUTOSIZE);
 
 	// load data from files
-	CvMat* intrinsic = (CvMat*)cvLoad("Intrinsics.xml");
-	CvMat* distortion = (CvMat*)cvLoad("Distortion.xml");
-	CvMat* H = (CvMat*)cvLoad("H.xml");
+	char filename[100];
+	_snprintf_s(filename, 100, "Intrinsics-%d.xml", device_id);
+	CvMat* intrinsic = (CvMat*)cvLoad(filename);
+	_snprintf_s(filename, 100, "Distortion-%d.xml", device_id);
+	CvMat* distortion = (CvMat*)cvLoad(filename);
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	CvMat* H = (CvMat*)cvLoad(filename);
 
 	IplImage* mapx = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
 	IplImage* mapy = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
@@ -358,6 +371,14 @@ void grab_templates(CvSize resolution) {
 	// loop
 	char c=0;
 	while(c != 'q') {
+		if(took_template) {
+			printf("restarting");
+			capture.restart();
+			took_template = false;
+			cvDestroyWindow("Templates Grabber");
+			cvNamedWindow("Templates Grabber", CV_WINDOW_AUTOSIZE);
+		}
+
 		capture.waitFrame(pre_image); // capture frame
 		cvWarpPerspective(pre_image, image,	H,
 			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
@@ -388,7 +409,7 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	findBallAround(img, cvPoint(x,y), &center, &radius);
 
 	// crop template
-	int crop_size = cvRound(radius) + 5;
+	int crop_size = cvRound(radius) + 1;
 	CvRect crop_rect = cvRect(	MAX(cvRound(center.x - crop_size), 0),
 		MAX(cvRound(center.y - crop_size), 0), 2*crop_size, 2*crop_size);
 	cvSetImageROI(img, crop_rect);
@@ -412,4 +433,6 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	printf("Saved as %s\n", filenames[choice]);
 
 	cvSaveImage(filenames[choice], img);
+
+	took_template = true;
 }
