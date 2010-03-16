@@ -16,8 +16,9 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 
 /* This tries to find the center and radius of the ball which contains
 the given point, in the image. */
-void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
-					float *radius, bool debug = true);
+void findBallAround(IplImage *src, CvPoint inside, int template_radius,
+					double color[], CvPoint2D32f *center, float *radius,
+					bool debug = true);
 
 /* This finds the ball matching the given template on the image */
 void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
@@ -25,6 +26,6 @@ void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 
 /* This marks the ball on the image */
 void markBall(IplImage *img, CvPoint2D32f center, float radius,
-			  bool circle = true);
+			  CvScalar color, bool circle = true);
 
 #endif

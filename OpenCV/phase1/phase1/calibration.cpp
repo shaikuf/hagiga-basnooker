@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include "calibration.h"
 #include "balls.h"
+#include "misc.h"
 #include "VideoCapture.h"
 
 /* this handles computation of the distortion matrices of the camera */
@@ -349,21 +350,8 @@ void grab_templates(CvSize resolution, int device_id) {
 
 	// load data from files
 	char filename[100];
-	_snprintf_s(filename, 100, "Intrinsics-%d.xml", device_id);
-	CvMat* intrinsic = (CvMat*)cvLoad(filename);
-	_snprintf_s(filename, 100, "Distortion-%d.xml", device_id);
-	CvMat* distortion = (CvMat*)cvLoad(filename);
 	_snprintf_s(filename, 100, "H-%d.xml", device_id);
 	CvMat* H = (CvMat*)cvLoad(filename);
-
-	IplImage* mapx = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
-	IplImage* mapy = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
-	cvInitUndistortMap(
-		intrinsic,
-		distortion,
-		mapx,
-		mapy
-	);
 
 	// initializations
 	cvSetMouseCallback("Templates Grabber", &saveTemplateAroundMouse, image);
@@ -402,11 +390,15 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	IplImage *img = (IplImage *)param;
 
+	x /= 1.25;
+	y /= 1.172;
+
 	// find the ball parameters
 	CvPoint2D32f center;
 	float radius;
 
-	findBallAround(img, cvPoint(x,y), &center, &radius);
+	findBallAround(img, cvPoint(x,y), 50, cvGet2D(img, y, x).val,
+		&center, &radius);
 
 	// crop template
 	int crop_size = cvRound(radius) + 1;
@@ -435,4 +427,118 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	cvSaveImage(filenames[choice], img);
 
 	took_template = true;
+}
+
+void learn_borders(CvSize resolution, int device_id) {
+	// init camera
+	VideoCapture capture(0, resolution.width, resolution.height);
+	IplImage *pre_image = capture.CreateCaptureImage();
+	IplImage *image = capture.CreateCaptureImage();
+	IplImage *scaled_image = cvCreateImage(cvSize(800, 600),
+		image->depth, image->nChannels);
+
+	cvNamedWindow("Borders Marker", CV_WINDOW_AUTOSIZE);
+
+	// load data from files
+	char filename[100];
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	CvMat* H = (CvMat*)cvLoad(filename);
+
+	capture.waitFrame(pre_image); // capture frame
+	cvWarpPerspective(pre_image, image,	H,
+		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+	if(resolution.width > 800) {
+		cvPyrDown(image, scaled_image);
+	} else {
+		cvCopy(image, scaled_image);
+	}
+
+	cvShowImage("Borders Marker", scaled_image);
+
+	// initialize data
+	CvMemStorage *mem = cvCreateMemStorage();
+	CvSeqWriter writer;
+	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
+
+	struct border_data data;
+	data.img = scaled_image;
+	data.resolution = &resolution;
+	data.writer = &writer;
+
+	// wait for user to mark
+	cvShowImage("Borders Marker", scaled_image);
+	cvSetMouseCallback("Borders Marker", &borderPointAroundMouse, &data);
+	char c=cvWaitKey(0);
+
+	// save borders
+	CvSeq* borders = cvEndWriteSeq(&writer);
+
+	_snprintf_s(filename, 100, "borders-%d.xml", device_id);
+	cvSave(filename, borders);
+
+	// release stuff
+	capture.stop();
+	cvDestroyWindow("Borders Marker");
+
+	cvReleaseMat(&H);
+	cvReleaseImage(&image);
+	cvReleaseImage(&pre_image);
+}
+
+void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
+	struct border_data *data = (struct border_data *)param;
+
+	static CvPoint first_point = cvPoint(-1, -1);
+	static CvPoint last_point = cvPoint(-1, -1);
+	static CvPoint new_point;
+	static IplImage *temp_img = createBlankCopy(data->img);
+	static int confirming = 0;
+
+	if(!confirming) {
+		if(event == CV_EVENT_LBUTTONUP) {
+			new_point = cvPoint(x,y);		
+
+			// draw new image
+			cvCopy(data->img, temp_img);
+			cvCircle(temp_img, new_point, 1, cvScalar(255, 0, 0), 2);
+			if(last_point.x != -1) {
+				cvLine(temp_img, last_point, new_point, cvScalar(255, 0, 0), 1);
+			} else {
+				first_point = new_point;
+			}
+
+			cvShowImage("Borders Marker", temp_img);
+
+			confirming = 1;
+		} else if(event == CV_EVENT_MBUTTONUP) {
+			// connect to the first dot
+			cvCopy(data->img, temp_img);
+			if(last_point.x != -1) {
+				cvLine(temp_img, first_point, new_point, cvScalar(255, 0, 0), 1);
+			}
+
+			cvShowImage("Borders Marker", temp_img);
+
+			confirming = 2;
+		}
+	} else {
+		if(event == CV_EVENT_LBUTTONUP && confirming == 1) {
+			// add point to sequence
+			float scale_x = (int)(data->resolution->height/600.);
+			float scale_y = (int)(data->resolution->width/800.);
+
+			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
+
+			CV_WRITE_SEQ_ELEM(new_point_scaled, *(data->writer));
+
+			last_point = new_point;
+			cvCopy(temp_img, data->img);
+
+			confirming = 0;
+		} else if(event == CV_EVENT_RBUTTONUP) {
+			cvShowImage("Borders Marker", data->img);
+
+			confirming = 0;
+		}
+	}
 }

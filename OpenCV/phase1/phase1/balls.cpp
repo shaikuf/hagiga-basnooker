@@ -10,13 +10,21 @@ void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 	CvPoint p;
 	findTemplate(img, templ, &p, debug);
 
+	center->x = p.x;
+	center->y = p.y;
+	*radius = 41.;
+	return;
+
+	//white = {0.299, 0.587, 0.114}
+
 	// find the ball parameters
-	findBallAround(img, p, center, radius, debug);
+	findBallAround(img, p, templ->width/2, cvGet2D(templ, templ->height/2,
+		templ->width/2).val, center, radius, debug);
 }
 
 /* This uses findBall() and marks the results on the image */
 void markBall(IplImage *img, CvPoint2D32f center, float radius,
-			  bool circle) {
+			  CvScalar color, bool circle) {
 
 	CvPoint center_i = cvPointFrom32f(center);
 
@@ -26,7 +34,7 @@ void markBall(IplImage *img, CvPoint2D32f center, float radius,
 
 	if(circle) {
 		cvCircle(overlay_drawing, cvPoint(cvRound(center_i.x),
-				cvRound(center_i.y)),	cvRound(radius), cvScalar(0xff), 2);
+				cvRound(center_i.y)),	cvRound(radius), cvScalar(0xff), 1);
 	}
 
     int line_len = 5;
@@ -37,7 +45,7 @@ void markBall(IplImage *img, CvPoint2D32f center, float radius,
 		cvRound(center_i.y)-line_len), cvPoint(cvRound(center_i.x),
 		cvRound(center_i.y)+line_len), cvScalar(0xff), 1);
 
-	cvSet(img, cvScalar(0, 0, 255), overlay_drawing);
+	cvSet(img, color, overlay_drawing);
 }
 
 /* Find circles using Hough Transform, and draw them on the returned image,
@@ -187,27 +195,37 @@ void findMaxContainedCircle(IplImage *bw, CvPoint inside,
 
 /* This tries to find the center and radius of the ball which contains
 the given point, in the image. */
-void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
-					float *radius, bool debug) {
+void findBallAround(IplImage *src, CvPoint inside, int template_radius,
+					double color[], CvPoint2D32f *center, float *radius,
+					bool debug) {
 
 	// crop around the ball
-	int max_radius = 27;
-	int min_radius = 23;
+
+	float mul = 3;
 
 	IplImage *cropped = cvCreateImage(
-		cvSize(4*max_radius, 4*max_radius), src->depth, src->nChannels);
+		cvSize(mul*template_radius, mul*template_radius), src->depth, src->nChannels);
 
 	int src_width = cvGetSize(src).width;
 	int src_height = cvGetSize(src).height;
-	CvPoint crop_corner = cvPoint(MAX(inside.x-2*max_radius,0),
-		MAX(inside.y-2*max_radius,0));
+
+	CvPoint crop_corner = cvPoint(MAX(inside.x-(mul/2)*template_radius,0),
+		MAX(inside.y-(mul/2)*template_radius,0));
 	cvSetImageROI( src, 
 		cvRect(crop_corner.x, crop_corner.y, 
-		MIN(4*max_radius,src_width), MIN(4*max_radius,src_height)));
+		MIN(mul*template_radius,src_width), MIN(mul*template_radius,src_height)));
 	cvCopy(src, cropped);
 	cvResetImageROI(src);
 	CvPoint crop_inside = cvPoint(inside.x - crop_corner.x,
 		inside.y - crop_corner.y);
+
+	// preprocessing
+
+	IplImage *temp = createBlankCopy(cropped);
+	cvSmooth(cropped, cropped, CV_GAUSSIAN, 5);
+	cvSmooth(cropped, temp, CV_BILATERAL, 0, 0, 23, 7);
+	cvCopy(temp, cropped);
+	cvReleaseImage(&temp);
 
 	// compute a laplacian of the channels and merge it
 		// split to channels
@@ -258,19 +276,30 @@ void findBallAround(IplImage *src, CvPoint inside, CvPoint2D32f *center,
 
 		// merge the results (into a "gray" laplacian)
 	IplImage *grad = createBlankCopy(grad_a8);
-	cvAddWeighted(grad_a8, 0.299, grad_b8, 0.587, 0, grad);
-	cvAddWeighted(grad, 0.886, grad_c8, 0.114, 0, grad);
+	cvAddWeighted(grad_a8, color[0]/(color[0]+color[1]), grad_b8,
+		color[1]/(color[0]+color[1]), 0, grad);
+	cvAddWeighted(grad, (color[0]+color[1])/(color[0]+color[1]+color[2]),
+		grad_c8, color[2]/(color[0]+color[1]+color[2]), 0, grad);
+
+	cvNamedWindow("Laplacian Threshold Gray", CV_WINDOW_AUTOSIZE);
+	cvShowImageWrapper("Laplacian Threshold Gray", grad);
 
 		// change to BW
-	cvSmooth(grad, grad, CV_MEDIAN, 3);
+	temp = createBlankCopy(grad);
+	cvSmooth(grad, temp, CV_MEDIAN, 3);
+	cvCopy(temp, grad);
+	cvReleaseImage(&temp);
+	
+	cvNamedWindow("Laplacian Threshold Gray 2", CV_WINDOW_AUTOSIZE);
+	cvShowImageWrapper("Laplacian Threshold Gray 2", grad);
+
 	cvThreshold(grad, grad, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
-	if(cvGet2D(grad, crop_inside.x, crop_inside.y).val[0] == 255) {
+	if(cvGet2D(grad, crop_inside.y, crop_inside.x).val[0] == 255) {
 		cvAbsDiffS(grad, grad, cvScalar(255));
 	}
 
 		// find the circle containing the given point in the BW image
-	findMaxContainedCircle(grad, crop_inside, center,
-		radius, 1);
+	findMaxContainedCircle(grad, crop_inside, center, radius, 1);
 
 	if(debug) {
 		// an overlay of the BW over the crop
