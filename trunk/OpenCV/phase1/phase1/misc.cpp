@@ -9,10 +9,10 @@ void findTemplate(IplImage *img, IplImage *templ, CvPoint *p, bool debug) {
 	IplImage *match = cvCreateImage(cvSize(img_s.width - templ_s.width + 1,
 		img_s.height - templ_s.height + 1), IPL_DEPTH_32F, 1);
 
-	cvMatchTemplate(img, templ, match, CV_TM_SQDIFF_NORMED);
+	cvMatchTemplate(img, templ, match, CV_TM_CCORR_NORMED);
 
 	CvPoint min_p;
-	cvMinMaxLoc(match, 0, 0, &min_p, 0, 0);
+	cvMinMaxLoc(match, 0, 0, 0, &min_p/*, 0*/, 0);
 
 	if(debug) {
 		cvNamedWindow("Template matching", CV_WINDOW_AUTOSIZE);
@@ -27,14 +27,14 @@ void findTemplate(IplImage *img, IplImage *templ, CvPoint *p, bool debug) {
 
 	cvReleaseImage(&match);
 
-	p->x = min_p.x + (24-1)/2;
-	p->y = min_p.y + (23-1)/2;
+	p->x = min_p.x + (templ->width)/2;
+	p->y = min_p.y + (templ->height)/2;
 }
 
 /* This returns a sequence of CvPoints specifying the contour of the
 board borders */
 CvSeq *tableBorders(CvMemStorage *mem) {
-	CvSeqWriter writer;
+	/*CvSeqWriter writer;
 	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
 	CV_WRITE_SEQ_ELEM(cvPoint(30, 33), writer);
 	CV_WRITE_SEQ_ELEM(cvPoint(773, 39), writer);
@@ -44,9 +44,13 @@ CvSeq *tableBorders(CvMemStorage *mem) {
 	CV_WRITE_SEQ_ELEM(cvPoint(34, 393), writer);
 	CV_WRITE_SEQ_ELEM(cvPoint(7, 369), writer);
 	CV_WRITE_SEQ_ELEM(cvPoint(6, 56), writer);
-	CvSeq* borders = cvEndWriteSeq(&writer);
+	CvSeq* borders = cvEndWriteSeq(&writer);*/
 
-	int border_delta = 13;
+	char filename[100];
+	_snprintf_s(filename, 100, "borders-%d.xml", 0);
+	CvSeq* borders = (CvSeq*)cvLoad(filename, mem);
+
+	/*int border_delta = 13;
 	for(int i = 0; i<borders->total; i++) {
 		CvPoint *p = (CvPoint*)cvGetSeqElem(borders, i);
 		p->x = downscale_factor*2*p->x;
@@ -60,7 +64,7 @@ CvSeq *tableBorders(CvMemStorage *mem) {
 			p->y += downscale_factor*border_delta;
 		else
 			p->y -= downscale_factor*border_delta;
-	}
+	}*/
 
 	return borders;
 }
