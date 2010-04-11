@@ -112,7 +112,7 @@ void gameLoop(CvSize resolution) {
 
 		// mark balls
 		for(i=0; i<opt_count; i++) {
-			markBall(image, ball_center[i], ball_radius[i], colors[i], true);
+			markBall(image, ball_center[i], ball_radius[i], colors[i], false);
 		}
 
 		// mark cue

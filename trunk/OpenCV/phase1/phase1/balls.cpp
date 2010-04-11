@@ -12,7 +12,7 @@ void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 
 	center->x = p.x;
 	center->y = p.y;
-	*radius = 41.;
+	*radius = templ->width/2;
 	return;
 
 	//white = {0.299, 0.587, 0.114}
