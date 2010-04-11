@@ -12,6 +12,7 @@
 #include "balls.h"
 #include "misc.h"
 #include "VideoCapture.h"
+#include <iostream>
 
 /* this handles computation of the distortion matrices of the camera */
 void calibration(int board_w, int board_h, int n_boards, float square_size,
@@ -390,8 +391,12 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	IplImage *img = (IplImage *)param;
 
-	/*x /= 1.25;
-	y /= 1.172;*/
+	bool is_1600 = true;
+
+	if(is_1600) {
+		x /= 1.25;
+		y /= 1.172;
+	}
 
 	// find the ball parameters
 	CvPoint2D32f center;
@@ -402,7 +407,10 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	center.x = x;
 	center.y = y;
-	radius = 50;
+	if(is_1600)
+		radius = 100;
+	else
+		radius = 50;
 
 	// crop template
 	int crop_size = cvRound(radius) + 1;
@@ -528,8 +536,13 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 	} else {
 		if(event == CV_EVENT_LBUTTONUP && confirming == 1) {
 			// add point to sequence
-			float scale_x = (int)(data->resolution->height/600.);
-			float scale_y = (int)(data->resolution->width/800.);
+			/*float scale_x = (int)(data->resolution->height/600.);
+			float scale_y = (int)(data->resolution->width/800.);*/
+
+			float scale_x = 1;
+			float scale_y = 1;
+
+			cout<<"added: ("<<x*scale_x<<", "<<y*scale_y<<")\n";
 
 			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
 

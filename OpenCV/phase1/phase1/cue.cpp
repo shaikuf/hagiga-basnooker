@@ -180,8 +180,24 @@ void meanCM(CvSeq *lines, CvPoint *dst_cm) {
 ball) */
 void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 			 double *cue_m, CvPoint *cue_cm) {
-	findCue(src, cue_m, cue_cm);
+	
+	
+	IplImage* src_ds = cvCreateImage(cvSize(800,600), src->depth, src->nChannels);
+	cvPyrDown(src, src_ds, CV_GAUSSIAN_5x5);
+
+	findCue(src_ds, cue_m, cue_cm);
+
+	cue_cm->x *= src->width/800;
+	cue_cm->y *= src->height/600;
+
 	cout<<"m="<<*cue_m<<endl<<"cm.x="<<cue_cm->x<<" cm.y="<<cue_cm->y<<endl;
+
+	static bool debug_once = true;
+	if(debug_once) {
+		cvNamedWindow("pyr down");
+		debug_once = false;
+	}
+	cvShowImage("pyr down", src_ds);
 
 	if(cue_cm->x == 0 && cue_cm->y == 0)
 		return;
@@ -266,7 +282,7 @@ void filterLinesByHistogram(IplImage *src, CvSeq *lines, int nbins, int width,
 
 /* This finds the center-of-mass and slope of the cue in the given image */
 void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug) {
-	debug = false;
+	debug = true;
 
 	static bool create_wnd = true;
 	if(create_wnd && debug) {
