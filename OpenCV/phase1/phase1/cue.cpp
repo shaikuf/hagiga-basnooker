@@ -190,8 +190,6 @@ void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 	cue_cm->x *= src->width/800;
 	cue_cm->y *= src->height/600;
 
-	cout<<"m="<<*cue_m<<endl<<"cm.x="<<cue_cm->x<<" cm.y="<<cue_cm->y<<endl;
-
 	static bool debug_once = true;
 	if(debug_once) {
 		cvNamedWindow("pyr down");
@@ -336,4 +334,46 @@ void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug) {
 	cvReleaseImage(&gray);
 	cvReleaseImage(&edge);
 	cvReleaseMemStorage(&storage);
+}
+
+float line2theta(double cue_m, CvPoint cue_cm, CvPoint2D32f white_center) {
+	float theta;
+
+	if(isinf(cue_m)) {
+		if(cue_cm.y < white_center.y)
+			theta = PI/2;
+		else
+			theta = 3*PI/2;
+	} else {
+		cue_m = fabs(cue_m);
+		if(cue_cm.x < white_center.x) {
+			if(cue_cm.y < white_center.y) {
+				// quarter 2
+				cue_m *= -1;
+				cout<<"quarter 2\n";
+				theta = PI + atan(cue_m);
+			} else {
+				// quarter 3
+				cout<<"quarter 3\n";
+				theta = PI + atan(cue_m);
+			}
+		} else {
+			if(cue_cm.y < white_center.y) {
+				// quarter 1
+				cout<<"quarter 1\n";
+				theta = atan(cue_m);
+			} else {
+				// quarter 4
+				cue_m *= -1;
+				cout<<"quarter 4\n";
+				theta = atan(cue_m) + 2*PI;
+			}
+		}
+	}
+
+	theta += PI;
+	if(theta >= 2*PI)
+		theta -= 2*PI;
+
+	return theta;
 }

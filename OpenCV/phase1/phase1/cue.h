@@ -36,4 +36,6 @@ void meanLine(CvSeq *lines, double *dst_m);
 /* This finds the mean center-of-mass for the given sequence of lines */
 void meanCM(CvSeq *lines, CvPoint *dst_cm);
 
+float line2theta(double cue_m, CvPoint cue_cm, CvPoint2D32f white_center);
+
 #endif

@@ -61,7 +61,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/NODEFAULTLIB:&quot;atlthunk&quot;&#x0D;&#x0A;/NODEFAULTLIB:&quot;LIBCMT&quot;"
-				AdditionalDependencies="videoInput.lib cv200.lib highgui200.lib cxcore200.lib"
+				AdditionalDependencies="videoInput.lib cv200.lib highgui200.lib cxcore200.lib WS2_32.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -196,6 +196,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\tcp_server.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\VideoCapture.cpp"
 				>
 			</File>
@@ -223,6 +227,10 @@
 			</File>
 			<File
 				RelativePath=".\misc.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tcp_server.h"
 				>
 			</File>
 			<File
