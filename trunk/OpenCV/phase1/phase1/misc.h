@@ -2,6 +2,7 @@
 #define _MISC_H
 
 #include <cv.h>
+#include <limits>
 
 #define PI 3.14159265
 
@@ -34,5 +35,10 @@ void cvShowImageWrapper(const char *name, IplImage *image);
 /* Normalize the image for debugging, so it could fit on the screen. */
 void normalize(IplImage* &img, CvRect crop, CvSize size);
 
+template<typename T>
+inline bool isinf(T value) {
+	return std::numeric_limits<T>::has_infinity &&
+		value == std::numeric_limits<T>::infinity();
+}
 
 #endif

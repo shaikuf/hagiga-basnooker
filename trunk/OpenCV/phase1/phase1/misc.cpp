@@ -1,6 +1,10 @@
 #include <cv.h>
 #include <highgui.h>
+#include <limits>
+#include <cmath>
 #include "misc.h"
+
+using namespace std;
 
 /* Finds the point which best matches the template */
 void findTemplate(IplImage *img, IplImage *templ, CvPoint *p, bool debug) {
@@ -145,3 +149,4 @@ void normalize(IplImage* &img, CvRect crop, CvSize size) {
 	cvReleaseImage(&img);
 	img = img_new;
 }
+

@@ -10,6 +10,7 @@
 #include "balls.h"
 #include "calibration.h"
 #include "VideoCapture.h"
+#include "tcp_server.h"
 
 using namespace std;
 
@@ -62,7 +63,7 @@ void gameLoop(CvSize resolution) {
 	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
 
 	// load data from files and initialize
-	int opt_count = 2;
+	int opt_count = 1;
 	IplImage *templates[8];
 	char *filenames[] = {"white-templ.jpg", "red-templ.jpg", "blue-templ.jpg",
 		"yellow-templ.jpg", "green-templ.jpg", "pink-templ.jpg", "brown-templ.jpg",
@@ -88,12 +89,16 @@ void gameLoop(CvSize resolution) {
 	CvPoint cue_cm;
 
 	bool find_balls = true;
+
+	TCPServer tcp_server;
 	
 	// main loop
 	
 	char c=0;
 	while(c != 'q') {
-		if(c == 'c')
+		/*if(c == 'c')
+			find_balls = true;*/
+		if(tcp_server.update())
 			find_balls = true;
 
 		// get and fix frame
@@ -105,6 +110,8 @@ void gameLoop(CvSize resolution) {
 		if(find_balls) {
 			for(i=0; i<opt_count; i++)
 				findBall(image, templates[i], &ball_center[i], &ball_radius[i], false);
+
+			tcp_server.send_white_pos(ball_center[0].x, ball_center[0].y);
 			find_balls = false;
 		}
 
@@ -117,6 +124,15 @@ void gameLoop(CvSize resolution) {
 
 		// mark cue
 		markCue(image, ball_center[0], ball_radius[0], &cue_m, &cue_cm);
+		
+		if(cue_cm.x != 0 || cue_cm.y != 0) { // we found the cue
+			float theta = line2theta(cue_m, cue_cm, ball_center[0]);
+			
+			cout<<"m="<<cue_m<<endl<<"cm.x="<<cue_cm.x<<" cm.y="<<cue_cm.y<<endl;
+			cout<<"theta="<<theta<<endl;
+
+			tcp_server.send_theta(theta);
+		}
 
 		cvShowImage("Game", image);
 		c=cvWaitKey(100);
