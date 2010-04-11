@@ -293,7 +293,7 @@ void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug) {
 	cvCvtColor(src, gray, CV_BGR2GRAY);
 
 	IplImage *edge = createBlankCopy(gray);
-	cvCanny(gray, edge, 250, 200);
+	cvCanny(gray, edge, 250, 150);
 
 	if(debug) {
 		cvShowImage("gray image", gray);
@@ -301,7 +301,7 @@ void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug) {
 	}
 
 	CvMemStorage *storage = cvCreateMemStorage(0);
-	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 80, 50, 5);
+	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 30, 30, 5);
 
 	// filter lines not on the board
 	drawBorders(src, 1);
