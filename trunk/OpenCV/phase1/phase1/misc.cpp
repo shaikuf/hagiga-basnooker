@@ -34,37 +34,9 @@ void findTemplate(IplImage *img, IplImage *templ, CvPoint *p, bool debug) {
 /* This returns a sequence of CvPoints specifying the contour of the
 board borders */
 CvSeq *tableBorders(CvMemStorage *mem) {
-	/*CvSeqWriter writer;
-	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(30, 33), writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(773, 39), writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(799, 62), writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(789, 382), writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(763, 408), writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(34, 393), writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(7, 369), writer);
-	CV_WRITE_SEQ_ELEM(cvPoint(6, 56), writer);
-	CvSeq* borders = cvEndWriteSeq(&writer);*/
-
 	char filename[100];
 	_snprintf_s(filename, 100, "borders-%d.xml", 0);
 	CvSeq* borders = (CvSeq*)cvLoad(filename, mem);
-
-	/*int border_delta = 13;
-	for(int i = 0; i<borders->total; i++) {
-		CvPoint *p = (CvPoint*)cvGetSeqElem(borders, i);
-		p->x = downscale_factor*2*p->x;
-		p->y = downscale_factor*2*p->y;
-
-		if(p->x < downscale_factor*800)
-			p->x += downscale_factor*border_delta;
-		else
-			p->x -= downscale_factor*border_delta;
-		if(p->y < downscale_factor*420)
-			p->y += downscale_factor*border_delta;
-		else
-			p->y -= downscale_factor*border_delta;
-	}*/
 
 	return borders;
 }
