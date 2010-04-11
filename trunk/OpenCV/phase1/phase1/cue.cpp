@@ -181,6 +181,7 @@ ball) */
 void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 			 double *cue_m, CvPoint *cue_cm) {
 	findCue(src, cue_m, cue_cm);
+	cout<<"m="<<*cue_m<<endl<<"cm.x="<<cue_cm->x<<" cm.y="<<cue_cm->y<<endl;
 
 	if(cue_cm->x == 0 && cue_cm->y == 0)
 		return;
@@ -264,15 +265,29 @@ void filterLinesByHistogram(IplImage *src, CvSeq *lines, int nbins, int width,
 }
 
 /* This finds the center-of-mass and slope of the cue in the given image */
-void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm) {
+void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug) {
+	debug = false;
+
+	static bool create_wnd = true;
+	if(create_wnd && debug) {
+		cvNamedWindow("gray image");
+		cvNamedWindow("edge image");
+		create_wnd = false;
+	}
+
 	IplImage *gray = createBlankCopy(src, 1);
 	cvCvtColor(src, gray, CV_BGR2GRAY);
 
 	IplImage *edge = createBlankCopy(gray);
-	cvCanny(gray, edge, 150, 50);
+	cvCanny(gray, edge, 250, 200);
+
+	if(debug) {
+		cvShowImage("gray image", gray);
+		cvShowImage("edge image", edge);
+	}
 
 	CvMemStorage *storage = cvCreateMemStorage(0);
-	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 80, 50, 50);
+	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 80, 50, 5);
 
 	// filter lines not on the board
 	drawBorders(src, 1);
@@ -287,7 +302,15 @@ void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm) {
 	int nbins = 30;
 	int width = 5;
 	double corr_thresh = .55;
-	filterLinesByHistogram(src, lines, nbins, width, corr_thresh);
+	//filterLinesByHistogram(src, lines, nbins, width, corr_thresh);
+
+	if(debug) {
+		// debug -- draw the found lines
+		for(int i = 0; i < lines->total; i++) {
+			CvPoint* line = (CvPoint*)cvGetSeqElem(lines,i);
+			cvLine(src, line[0], line[1], CV_RGB(255,0,0), 3, 8 );
+		}
+	}
 
 	// compute the mean line
 	meanLine(lines, cue_m);

@@ -9,7 +9,7 @@ void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 			 double *cue_m, CvPoint *cue_cm);
 
 /* This finds the center-of-mass and slope of the cue in the given image */
-void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm);
+void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug = false);
 
 /* This filters lines which are completely outside tableBorders() */
 void filterLinesOnTable(CvSeq *lines);
