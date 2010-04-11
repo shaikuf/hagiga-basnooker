@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 	//CvSize resolution = cvSize(1600, 1200);
 	CvSize resolution = cvSize(800, 600);
 
-	int mode = 0;
+	int mode = 3;
 	/* available modes:
 		0: normal
 		1: instance calibration

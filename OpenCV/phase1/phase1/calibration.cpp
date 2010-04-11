@@ -390,15 +390,19 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	IplImage *img = (IplImage *)param;
 
-	x /= 1.25;
-	y /= 1.172;
+	/*x /= 1.25;
+	y /= 1.172;*/
 
 	// find the ball parameters
 	CvPoint2D32f center;
 	float radius;
 
-	findBallAround(img, cvPoint(x,y), 50, cvGet2D(img, y, x).val,
-		&center, &radius);
+	/*findBallAround(img, cvPoint(x,y), 50, cvGet2D(img, y, x).val,
+		&center, &radius);*/
+
+	center.x = x;
+	center.y = y;
+	radius = 50;
 
 	// crop template
 	int crop_size = cvRound(radius) + 1;
