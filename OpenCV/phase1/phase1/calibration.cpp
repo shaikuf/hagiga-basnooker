@@ -15,8 +15,8 @@
 #include <iostream>
 
 /* this handles computation of the distortion matrices of the camera */
-void calibration(int board_w, int board_h, int n_boards, float square_size,
-				 CvSize resolution, int device_id) {
+void calibration(int board_w, int board_h, int n_boards, float square_width,
+				 float square_height, CvSize resolution, int device_id) {
 
 	int board_n = board_w * board_h;
 	CvSize board_sz = cvSize( board_w, board_h );
@@ -76,8 +76,8 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 			for( int i=step, j=0; j<board_n; ++i,++j ) {
 				CV_MAT_ELEM(*image_points, float,i,0) = corners[j].x;
 				CV_MAT_ELEM(*image_points, float,i,1) = corners[j].y;
-				CV_MAT_ELEM(*object_points,float,i,0) = square_size*(j/board_w);
-				CV_MAT_ELEM(*object_points,float,i,1) = square_size*(j%board_w);
+				CV_MAT_ELEM(*object_points,float,i,0) = square_height*(j/board_w);
+				CV_MAT_ELEM(*object_points,float,i,1) = square_width*(j%board_w);
 				CV_MAT_ELEM(*object_points,float,i,2) = 0.0f;
 			}
 			CV_MAT_ELEM(*point_counts, int,successes,0) = board_n;
@@ -178,11 +178,10 @@ void calibration(int board_w, int board_h, int n_boards, float square_size,
 }
 
 /* this handles generation of perspective wrapping matrix */
-void birds_eye(int board_w, int board_h, CvSize resolution, int device_id) {
+void birds_eye(int board_w, int board_h, float square_width, float square_height,
+			   CvSize resolution, int device_id) {
 	// INPUT PARAMETERS:
 	//
-	board_w = 5;
-	board_h = 3;
 	int board_n = board_w * board_h;
 
 	CvSize board_sz = cvSize( board_w, board_h );
@@ -244,7 +243,7 @@ void birds_eye(int board_w, int board_h, CvSize resolution, int device_id) {
 		board_sz,
 		corners,
 		&corner_count,
-		CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS
+		CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS 
 	);
 	if(!found){
 		printf("Couldn't aquire chessboard. only found %d of %d corners\n",
@@ -271,9 +270,9 @@ void birds_eye(int board_w, int board_h, CvSize resolution, int device_id) {
 	//
 	CvPoint2D32f objPts[4], imgPts[4];
 	objPts[0].x = 0; objPts[0].y = 0;
-	objPts[1].x = board_w-1; objPts[1].y = 0;
-	objPts[2].x = 0; objPts[2].y = board_h-1;
-	objPts[3].x = board_w-1; objPts[3].y = board_h-1;
+	objPts[1].x = square_width*(board_w-1); objPts[1].y = 0;
+	objPts[2].x = 0; objPts[2].y = square_height*(board_h-1);
+	objPts[3].x = square_width*(board_w-1); objPts[3].y = square_height*(board_h-1);
 	imgPts[0] = corners[0];
 	imgPts[1] = corners[board_w-1];
 	imgPts[2] = corners[(board_h-1)*board_w];
@@ -305,7 +304,7 @@ void birds_eye(int board_w, int board_h, CvSize resolution, int device_id) {
 
 	// LET THE USER ADJUST THE Z HEIGHT OF THE VIEW
 	//
-	float Z = 1;
+	float Z = -10;
 	int key = 0;
 	IplImage *birds_image = cvCloneImage(image);
 	cvNamedWindow("Birds_Eye");
