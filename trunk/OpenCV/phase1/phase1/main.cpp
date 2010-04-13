@@ -33,10 +33,10 @@ int main(int argc, char* argv[])
 
 	if(mode == 2) {
 		// calibrate camera
-		calibration(5, 3, 12, 4.95f, resolution, 0);
+		calibration(4, 4, 12, 29.7, 21.0, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
-		birds_eye(5, 3, resolution, 0);
+		birds_eye(4, 4, 29.7, 21.0, resolution, 0);
 	} else if(mode == 0) {
 		// main loop
 		gameLoop(resolution);
