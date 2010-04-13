@@ -70,7 +70,7 @@ CvHistogram *cueHistogram(int width, int nbins) {
 	CvHistogram *hist = hueHistFromLine(src, line[0], line[1], width, nbins);
 	cvSet1D(hist->bins, 20, cvScalar(0));
 
-	cvReleaseImage(&src)
+	cvReleaseImage(&src);
 	cvReleaseImage(&gray);
 	cvReleaseImage(&edge);
 	cvReleaseMemStorage(&storage);
