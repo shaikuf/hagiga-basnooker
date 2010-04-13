@@ -558,3 +558,101 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 		}
 	}
 }
+
+void learn_edges(CvSize resolution, int device_id) {
+	// init camera
+	VideoCapture capture(0, resolution.width, resolution.height);
+	IplImage *pre_image = capture.CreateCaptureImage();
+	IplImage *image = capture.CreateCaptureImage();
+	IplImage *scaled_image = cvCreateImage(cvSize(800, 600),
+		image->depth, image->nChannels);
+
+	cvNamedWindow("Edges Marker", CV_WINDOW_AUTOSIZE);
+
+	// load data from files
+	char filename[100];
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	CvMat* H = (CvMat*)cvLoad(filename);
+
+	capture.waitFrame(pre_image); // capture frame
+	cvWarpPerspective(pre_image, image,	H,
+		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+	if(resolution.width > 800) {
+		cvPyrDown(image, scaled_image);
+	} else {
+		cvCopy(image, scaled_image);
+	}
+
+	cvShowImage("Edges Marker", scaled_image);
+
+	// initialize data
+	CvMemStorage *mem = cvCreateMemStorage();
+	CvSeqWriter writer;
+	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
+
+	struct border_data data;
+	data.img = scaled_image;
+	data.resolution = &resolution;
+	data.writer = &writer;
+
+	// wait for user to mark
+	cvShowImage("Edges Marker", scaled_image);
+	cvSetMouseCallback("Edges Marker", &edgePointAroundMouse, &data);
+	char c=cvWaitKey(0);
+
+	// save borders
+	CvSeq* edges = cvEndWriteSeq(&writer);
+
+	_snprintf_s(filename, 100, "edges-%d.xml", device_id);
+	cvSave(filename, edges);
+
+	// release stuff
+	capture.stop();
+	cvDestroyWindow("Edges Marker");
+
+	cvReleaseMat(&H);
+	cvReleaseImage(&image);
+	cvReleaseImage(&pre_image);
+}
+
+void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
+	struct border_data *data = (struct border_data *)param;
+
+	static CvPoint new_point;
+	static IplImage *temp_img = createBlankCopy(data->img);
+	static int confirming = 0;
+
+	if(!confirming) {
+		if(event == CV_EVENT_LBUTTONUP) {
+			new_point = cvPoint(x,y);		
+
+			// draw new image
+			cvCopy(data->img, temp_img);
+			cvCircle(temp_img, new_point, 1, cvScalar(255, 0, 0), 2);
+
+			cvShowImage("Edges Marker", temp_img);
+
+			confirming = 1;
+		}
+	} else {
+		if(event == CV_EVENT_LBUTTONUP) {
+			// add point to sequence
+			float scale_x = (int)(data->resolution->height/600.);
+			float scale_y = (int)(data->resolution->width/800.);
+
+			cout<<"added: ("<<x*scale_x<<", "<<y*scale_y<<")\n";
+
+			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
+
+			CV_WRITE_SEQ_ELEM(new_point_scaled, *(data->writer));
+
+			cvCopy(temp_img, data->img);
+
+			confirming = 0;
+		} else if(event == CV_EVENT_RBUTTONUP) {
+			cvShowImage("Edges Marker", data->img);
+
+			confirming = 0;
+		}
+	}
+}

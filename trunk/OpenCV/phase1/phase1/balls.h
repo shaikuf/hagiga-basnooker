@@ -28,4 +28,6 @@ void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 void markBall(IplImage *img, CvPoint2D32f center, float radius,
 			  CvScalar color, bool circle = true);
 
+CvPoint2D32f fixPosition(CvPoint2D32f center);
+
 #endif

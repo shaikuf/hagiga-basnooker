@@ -353,3 +353,35 @@ void findBallAround(IplImage *src, CvPoint inside, int template_radius,
 	cvReleaseImage(&grad);
 	cvReleaseImage(&cropped);
 }
+
+CvPoint2D32f fixPosition(CvPoint2D32f center) {
+	CvMemStorage *mem = cvCreateMemStorage();
+
+	char filename[100];
+	_snprintf_s(filename, 100, "edges-%d.xml", 0);
+	CvSeq* edges = (CvSeq*)cvLoad(filename, mem);
+
+	CvPoint p0 = *(CvPoint*)cvGetSeqElem(edges, 0);
+	CvPoint p3 = *(CvPoint*)cvGetSeqElem(edges, 3);
+	CvPoint p2 = *(CvPoint*)cvGetSeqElem(edges, 2);
+
+	cvReleaseMemStorage(&mem);
+
+	double X = sqrt(pow((double)p3.x-p2.x,2)+pow((double)p3.y-p2.y,2));
+	double Y = sqrt(pow((double)p3.x-p0.x,2)+pow((double)p3.y-p0.y,2));
+
+	double theta = atan2((double)p2.y-p3.y, p2.x-p3.x);
+	double alpha = atan2(center.y-p3.y, center.x-p3.x);
+	
+	double L = sqrt(pow(center.x-p3.x, 2) + pow(center.y-p3.y, 2));
+
+	double A = L*cos(alpha-theta);
+	double B = L*sin(alpha-theta);
+
+	CvPoint2D32f res;
+
+	res.x = A/X;
+	res.y = 1+B/Y;
+
+	return res;
+}
