@@ -46,6 +46,8 @@ void markBall(IplImage *img, CvPoint2D32f center, float radius,
 		cvRound(center_i.y)+line_len), cvScalar(0xff), 1);
 
 	cvSet(img, color, overlay_drawing);
+
+	cvReleaseImage(&overlay_drawing);
 }
 
 /* Find circles using Hough Transform, and draw them on the returned image,

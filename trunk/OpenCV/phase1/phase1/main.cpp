@@ -141,6 +141,7 @@ void gameLoop(CvSize resolution) {
 	capture.stop();
 	cvDestroyWindow("Game");
 
+	cvReleaseImage(&pre_image);
 	cvReleaseImage(&image);
 	for(i=0; i<opt_count; i++)
 		cvReleaseImage(&templates[i]);

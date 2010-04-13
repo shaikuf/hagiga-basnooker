@@ -70,6 +70,7 @@ CvHistogram *cueHistogram(int width, int nbins) {
 	CvHistogram *hist = hueHistFromLine(src, line[0], line[1], width, nbins);
 	cvSet1D(hist->bins, 20, cvScalar(0));
 
+	cvReleaseImage(&src)
 	cvReleaseImage(&gray);
 	cvReleaseImage(&edge);
 	cvReleaseMemStorage(&storage);
@@ -196,6 +197,7 @@ void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 		debug_once = false;
 	}
 	cvShowImage("pyr down", src_ds);
+	cvReleaseImage(&src_ds);
 
 	if(cue_cm->x == 0 && cue_cm->y == 0)
 		return;
