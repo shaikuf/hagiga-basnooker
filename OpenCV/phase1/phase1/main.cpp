@@ -29,6 +29,7 @@ int main(int argc, char* argv[])
 		2: general calibration
 		3: template grabbing
 		4: learn borders
+		5: learn edges
 	*/
 
 	if(mode == 2) {
@@ -46,6 +47,9 @@ int main(int argc, char* argv[])
 	} else if(mode == 4) {
 		// learn borders
 		learn_borders(resolution, 0);
+	} else if(mode == 5) {
+		// learn edges
+		learn_edges(resolution, 0);
 	}
 
 	return 0;
@@ -111,8 +115,10 @@ void gameLoop(CvSize resolution) {
 			for(i=0; i<opt_count; i++)
 				findBall(image, templates[i], &ball_center[i], &ball_radius[i], false);
 
-			tcp_server.send_white_pos(ball_center[0].x, ball_center[0].y);
 			find_balls = false;
+
+			CvPoint2D32f normed_pos = fixPosition(ball_center[0]);
+			tcp_server.send_white_pos(normed_pos.x, normed_pos.y);
 		}
 
 		// find cue

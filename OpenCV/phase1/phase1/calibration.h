@@ -19,6 +19,9 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param);
 void learn_borders(CvSize resolution, int device_id);
 void borderPointAroundMouse(int event, int x, int y, int flags, void *param);
 
+void learn_edges(CvSize resolution, int device_id);
+void edgePointAroundMouse(int event, int x, int y, int flags, void *param);
+
 struct border_data {
 	IplImage *img;
 	CvSeqWriter *writer;
