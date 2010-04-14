@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 	CvSize resolution = cvSize(1600, 1200);
 	//CvSize resolution = cvSize(800, 600);
 
-	int mode = 0;
+	int mode = 0 ;
 	/* available modes:
 		0: normal
 		1: instance calibration
@@ -119,6 +119,7 @@ void gameLoop(CvSize resolution) {
 
 			CvPoint2D32f normed_pos = fixPosition(ball_center[0]);
 			tcp_server.send_white_pos(normed_pos.x, normed_pos.y);
+			cout<<"Sending: ("<<normed_pos.x<<", "<<normed_pos.y<<")\n";
 		}
 
 		// find cue
@@ -134,8 +135,8 @@ void gameLoop(CvSize resolution) {
 		if(cue_cm.x != 0 || cue_cm.y != 0) { // we found the cue
 			float theta = line2theta(cue_m, cue_cm, ball_center[0]);
 			
-			cout<<"m="<<cue_m<<endl<<"cm.x="<<cue_cm.x<<" cm.y="<<cue_cm.y<<endl;
-			cout<<"theta="<<theta<<endl;
+			/*cout<<"m="<<cue_m<<endl<<"cm.x="<<cue_cm.x<<" cm.y="<<cue_cm.y<<endl;
+			cout<<"theta="<<theta<<endl;*/
 
 			tcp_server.send_theta(theta);
 		}

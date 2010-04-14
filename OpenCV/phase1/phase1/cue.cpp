@@ -352,22 +352,18 @@ float line2theta(double cue_m, CvPoint cue_cm, CvPoint2D32f white_center) {
 			if(cue_cm.y < white_center.y) {
 				// quarter 2
 				cue_m *= -1;
-				cout<<"quarter 2\n";
 				theta = PI + atan(cue_m);
 			} else {
 				// quarter 3
-				cout<<"quarter 3\n";
 				theta = PI + atan(cue_m);
 			}
 		} else {
 			if(cue_cm.y < white_center.y) {
 				// quarter 1
-				cout<<"quarter 1\n";
 				theta = atan(cue_m);
 			} else {
 				// quarter 4
 				cue_m *= -1;
-				cout<<"quarter 4\n";
 				theta = atan(cue_m) + 2*PI;
 			}
 		}
