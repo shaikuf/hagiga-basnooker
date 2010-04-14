@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 	CvSize resolution = cvSize(1600, 1200);
 	//CvSize resolution = cvSize(800, 600);
 
-	int mode = 0 ;
+	int mode = 1;
 	/* available modes:
 		0: normal
 		1: instance calibration
@@ -30,11 +30,13 @@ int main(int argc, char* argv[])
 		3: template grabbing
 		4: learn borders
 		5: learn edges
+		-1: watch with corrections
 	*/
 
 	if(mode == 2) {
 		// calibrate camera
-		calibration(4, 4, 12, 29.7, 21.0, resolution, 0);
+		calibration(4, 4, 12, 29.0, 21.0, resolution, 0);
+		//calibration(5, 3, 12, 29.7, 29.7, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
 		birds_eye(4, 4, 29.7, 21.0, resolution, 0);
@@ -50,6 +52,9 @@ int main(int argc, char* argv[])
 	} else if(mode == 5) {
 		// learn edges
 		learn_edges(resolution, 0);
+	} else if(mode == -1) {
+		// watch with corrections
+		watch(resolution, false, 0);
 	}
 
 	return 0;
