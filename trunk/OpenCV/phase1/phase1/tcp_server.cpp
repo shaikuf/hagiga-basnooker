@@ -136,7 +136,7 @@ void TCPServer::send_white_pos(float x, float y) {
 		return;
 
 	char buf[128];
-	sprintf(buf, "%f\n%f\n", x, y);
+	sprintf(buf, "c%f,%f\n", x, y);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
 		printf("Error at send(): %ld\n", WSAGetLastError());
 		exit(1);
