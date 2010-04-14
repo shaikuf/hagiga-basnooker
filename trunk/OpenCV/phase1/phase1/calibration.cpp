@@ -82,6 +82,8 @@ void calibration(int board_w, int board_h, int n_boards, float square_width,
 			}
 			CV_MAT_ELEM(*point_counts, int,successes,0) = board_n;
 			successes++;
+		} else {
+			printf("only found %d out of %d\n", corner_count, board_n);
 		}
 		//==============
 	} //END COLLECTION WHILE LOOP.
@@ -231,11 +233,10 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 
 	// Rectify our image
 	//
-	cvRemap( t, image, mapx, mapy );
+	//cvRemap( t, image, mapx, mapy );
 
 	// GET THE CHESSBOARD ON THE PLANE
 	//
-	cvNamedWindow("Chessboard");
 	CvPoint2D32f* corners = new CvPoint2D32f[ board_n ];
 	int corner_count = 0;
 	int found = cvFindChessboardCorners(
@@ -249,6 +250,7 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 		printf("Couldn't aquire chessboard. only found %d of %d corners\n",
 			corner_count,board_n
 		);
+		birds_eye(board_w, board_h, square_width, square_height, resolution, device_id);
 		return;
 	}
 	//Get Subpixel accuracy on those corners:
@@ -295,6 +297,7 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 		found
 	);
 
+	cvNamedWindow("Chessboard");
 	cvShowImage( "Chessboard", image );
 
 	// FIND THE HOMOGRAPHY
@@ -304,7 +307,7 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 
 	// LET THE USER ADJUST THE Z HEIGHT OF THE VIEW
 	//
-	float Z = -10;
+	float Z = 1;
 	int key = 0;
 	IplImage *birds_image = cvCloneImage(image);
 	cvNamedWindow("Birds_Eye");
@@ -655,4 +658,64 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 			confirming = 0;
 		}
 	}
+}
+
+void watch(CvSize resolution, bool with_birds_eye, int device_id) {
+	char filename[100];
+	_snprintf_s(filename, 100, "Intrinsics-%d.xml", device_id);
+	CvMat* intrinsic = (CvMat*)cvLoad(filename);
+	_snprintf_s(filename, 100, "Distortion-%d.xml", device_id);
+	CvMat* distortion = (CvMat*)cvLoad(filename);
+
+	IplImage* image = 0;
+
+	// CAPTURE IMAGE
+	//
+	VideoCapture capture(device_id,resolution.width,resolution.height);
+	image = capture.CreateCaptureImage();
+
+	// UNDISTORT OUR IMAGE
+	//
+	IplImage* mapx = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
+	IplImage* mapy = cvCreateImage( cvGetSize(image), IPL_DEPTH_32F, 1 );
+
+	//This initializes rectification matrices
+	//
+	cvInitUndistortMap(
+		intrinsic,
+		distortion,
+		mapx,
+		mapy
+	);
+	IplImage *t = createBlankCopy(image);
+
+	CvMat* H;
+	if(with_birds_eye) {
+		char filename[100];
+		_snprintf_s(filename, 100, "H-%d.xml", device_id);
+		H = (CvMat*)cvLoad(filename);
+	}
+
+	// LIVE VIEW
+
+	cvNamedWindow("Live View");
+	char c = 0;
+	while(c!=27){
+		capture.waitFrame(image);
+
+		cvCopy(image, t);
+		if(with_birds_eye) {
+			cvWarpPerspective(t, image,	H,
+			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+		} else {
+			cvRemap( t, image, mapx, mapy );
+		}
+
+		cvShowImage("Live View",image);
+
+		c = cvWaitKey(10);
+	}
+
+	capture.stop();
+	cvDestroyWindow("Live View");
 }

@@ -22,6 +22,8 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param);
 void learn_edges(CvSize resolution, int device_id);
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param);
 
+void watch(CvSize resolution, bool with_birds_eye, int device_id);
+
 struct border_data {
 	IplImage *img;
 	CvSeqWriter *writer;
