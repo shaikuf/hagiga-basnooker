@@ -9,13 +9,14 @@
 extern int downscale_factor;
 extern bool save_images;
 
+#define FIND_TEMPL_DEBUG 0
+
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */
 IplImage *createBlankCopy(IplImage *src, int channels = -1, int depth = -1);
 
 /* Finds the point which best matches the template */
-void findTemplate(IplImage *img, IplImage *templ, CvPoint *p,
-				  bool debug = true);
+void findTemplate(IplImage *img, IplImage *templ, CvPoint *p);
 
 /* This draws a visualization image of the given histogram, on the window
 with the given name */

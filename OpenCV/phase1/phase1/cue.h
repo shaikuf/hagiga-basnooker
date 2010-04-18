@@ -3,6 +3,9 @@
 
 #include <cv.h>
 
+#define CUE_PYRDOWN_WIDTH 800
+#define CUE_PYRDOWN_HEIGHT 600
+
 /* This uses findCue() and marks the results on the image (around the white
 ball) */
 void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,

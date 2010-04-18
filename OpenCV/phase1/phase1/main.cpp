@@ -118,7 +118,7 @@ void gameLoop(CvSize resolution) {
 		// find balls
 		if(find_balls) {
 			for(i=0; i<opt_count; i++)
-				findBall(image, templates[i], &ball_center[i], &ball_radius[i], false);
+				findBall(image, templates[i], &ball_center[i], &ball_radius[i]);
 
 			find_balls = false;
 

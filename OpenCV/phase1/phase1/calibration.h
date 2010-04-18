@@ -11,20 +11,21 @@ void birds_eye(int board_w, int board_h, float board_width, float board_height,
 
 /* this lets the user click on balls and save them as templates */
 void grab_templates(CvSize resolution, int device_id);
-
-/* mouse callback wrapper for finding a ball around the mouse and saving it
-as a template */
 void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param);
 
+/* this lets the user mark the cue-finding borders of the table */
 void learn_borders(CvSize resolution, int device_id);
 void borderPointAroundMouse(int event, int x, int y, int flags, void *param);
 
+/* this lets the user mark the edges of the projection area */
 void learn_edges(CvSize resolution, int device_id);
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param);
 
+/* this lets the user watch the camera image fixed using the matrices */
 void watch(CvSize resolution, bool with_birds_eye, int device_id);
 
-struct border_data {
+/* this is used to pass more parameters the the mouse callback functions */
+struct seq_data {
 	IplImage *img;
 	CvSeqWriter *writer;
 	CvSize *resolution;
