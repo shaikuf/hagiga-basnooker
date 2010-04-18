@@ -12,6 +12,7 @@
 #include "balls.h"
 #include "misc.h"
 #include "VideoCapture.h"
+#include "cue.h"
 #include <iostream>
 
 /* this handles computation of the distortion matrices of the camera */
@@ -38,7 +39,7 @@ void calibration(int board_w, int board_h, int n_boards, float square_width,
 	int successes = 0;
 	int step, frame = 0;
 
-	IplImage *gray_image = cvCreateImage(cvGetSize(image),8,1);//subpixel
+	IplImage *gray_image = cvCreateImage(cvGetSize(image),8,1);
 	
 	// CAPTURE CORNER VIEWS LOOP UNTIL WE'VE GOT n_boards
 	// SUCCESSFUL CAPTURES (ALL CORNERS ON THE BOARD ARE FOUND)
@@ -94,6 +95,7 @@ void calibration(int board_w, int board_h, int n_boards, float square_width,
 	CvMat* object_points2 = cvCreateMat(successes*board_n,3,CV_32FC1);
 	CvMat* image_points2 = cvCreateMat(successes*board_n,2,CV_32FC1);
 	CvMat* point_counts2 = cvCreateMat(successes,1,CV_32SC1);
+
 	//TRANSFER THE POINTS INTO THE CORRECT SIZE MATRICES
 	//Below, we write out the details in the next two loops. We could
 	//instead have written:
@@ -233,7 +235,7 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 
 	// Rectify our image
 	//
-	//cvRemap( t, image, mapx, mapy );
+	cvRemap( t, image, mapx, mapy );
 
 	// GET THE CHESSBOARD ON THE PLANE
 	//
@@ -340,8 +342,6 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 	cvSave(filename,H); //We can reuse H for the same camera mounting
 }
 
-bool took_template = false;
-
 /* this lets the user click on balls and save them as templates */
 void grab_templates(CvSize resolution, int device_id) {
 	// init camera
@@ -350,6 +350,7 @@ void grab_templates(CvSize resolution, int device_id) {
 	IplImage *image = capture.CreateCaptureImage();
 
 	cvNamedWindow("Templates Grabber", CV_WINDOW_AUTOSIZE);
+	cvNamedWindow("New Template", CV_WINDOW_AUTOSIZE);
 
 	// load data from files
 	char filename[100];
@@ -362,14 +363,6 @@ void grab_templates(CvSize resolution, int device_id) {
 	// loop
 	char c=0;
 	while(c != 'q') {
-		if(took_template) {
-			printf("restarting");
-			capture.restart();
-			took_template = false;
-			cvDestroyWindow("Templates Grabber");
-			cvNamedWindow("Templates Grabber", CV_WINDOW_AUTOSIZE);
-		}
-
 		capture.waitFrame(pre_image); // capture frame
 		cvWarpPerspective(pre_image, image,	H,
 			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
@@ -380,69 +373,63 @@ void grab_templates(CvSize resolution, int device_id) {
 
 	capture.stop();
 	cvDestroyWindow("Templates Grabber");
+	cvDestroyWindow("New Template");
 
 	cvReleaseImage(&image);
 	cvReleaseImage(&pre_image);
 }
 
-/* mouse callback wrapper for finding a ball around the mouse and saving it
-as a template */
 void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	if(event != CV_EVENT_LBUTTONUP)
 		return;
 
 	IplImage *img = (IplImage *)param;
 
-	bool is_1600 = true;
+	// fix the x-y got from OpenCV (i don't know why! it's bad!)
+	x /= 1.25;
+	y /= 1.172;
 
-	if(is_1600) {
-		x /= 1.25;
-		y /= 1.172;
-	}
-
-	// find the ball parameters
-	CvPoint2D32f center;
-	float radius;
-
-	/*findBallAround(img, cvPoint(x,y), 50, cvGet2D(img, y, x).val,
-		&center, &radius);*/
-
-	center.x = x;
-	center.y = y;
-	if(is_1600)
-		radius = 100;
-	else
-		radius = 50;
-
+	int crop_size = 100;
+	
 	// crop template
-	int crop_size = cvRound(radius) + 1;
-	CvRect crop_rect = cvRect(	MAX(cvRound(center.x - crop_size), 0),
-		MAX(cvRound(center.y - crop_size), 0), 2*crop_size, 2*crop_size);
+	CvRect crop_rect = cvRect(	MAX(cvRound(x - crop_size/2), 0),
+		MAX(cvRound(y - crop_size/2), 0), crop_size, crop_size);
 	cvSetImageROI(img, crop_rect);
 
+	cvShowImage("New Template", img);
+
 	// save template
-	int opt_count = 2;
-	char *names[] = {"White", "Red"};
-	char *filenames[] = {"white-templ.jpg", "red-templ.jpg"};
+	int opt_count = 1;
+	char *names[] = {"White", "Red", "Blue", "Yellow", "Green", "Pink", "Brown",
+		"Black"};
+	char *filenames[] = {"white-templ.jpg", "red-templ.jpg", "blue-templ.jpg",
+		"yellow-templ.jpg", "green-templ.jpg", "pink-templ.jpg", "brown-templ.jpg",
+		"black-templ.jpg"};
 
 	printf("Which ball is it?\n");
 	int i;
 	for(i = 0; i < opt_count; i++) {
 		printf("%d. %s\n", i, names[i]);
 	}
+	printf("-1. Reject image\n");
 
 	int choice;
 	scanf("%d", &choice);
-	while(choice<0 || choice>=opt_count)
+	while(choice<-1 || choice>=opt_count)
 		scanf("%d", &choice);
 
-	printf("Saved as %s\n", filenames[choice]);
+	if(choice != -1) {
+		printf("Saved as %s\n", filenames[choice]);
+		cvSaveImage(filenames[choice], img);
+	} else {
+		printf("Rejected\n");
+	}
 
-	cvSaveImage(filenames[choice], img);
-
-	took_template = true;
+	// clear the ROI we set
+	cvResetImageROI(img);
 }
 
+/* this lets the user mark the cue-finding borders of the table */
 void learn_borders(CvSize resolution, int device_id) {
 	// init camera
 	VideoCapture capture(0, resolution.width, resolution.height);
@@ -461,26 +448,21 @@ void learn_borders(CvSize resolution, int device_id) {
 	capture.waitFrame(pre_image); // capture frame
 	cvWarpPerspective(pre_image, image,	H,
 		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
-	if(resolution.width > 800) {
-		cvPyrDown(image, scaled_image);
-	} else {
-		cvCopy(image, scaled_image);
-	}
 
-	cvShowImage("Borders Marker", scaled_image);
+	cvShowImage("Borders Marker", image);
 
 	// initialize data
 	CvMemStorage *mem = cvCreateMemStorage();
 	CvSeqWriter writer;
 	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
 
-	struct border_data data;
-	data.img = scaled_image;
+	struct seq_data data;
+	data.img = image;
 	data.resolution = &resolution;
 	data.writer = &writer;
 
 	// wait for user to mark
-	cvShowImage("Borders Marker", scaled_image);
+	cvShowImage("Borders Marker", image);
 	cvSetMouseCallback("Borders Marker", &borderPointAroundMouse, &data);
 	char c=cvWaitKey(0);
 
@@ -500,17 +482,25 @@ void learn_borders(CvSize resolution, int device_id) {
 }
 
 void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
-	struct border_data *data = (struct border_data *)param;
+	struct seq_data *data = (struct seq_data *)param;
 
+	// static function variables
 	static CvPoint first_point = cvPoint(-1, -1);
 	static CvPoint last_point = cvPoint(-1, -1);
+
+	// we have 2 states: non-confirming -- take a point and the draw it
+	// and show the image to the users with LMB, connect the last with the
+	// first with MMB
+	// confirming -- confirm the new point with LMB, and reject with RMB
+	// confirming == 2 -- means that we connected the last with the first
+	// and on LMB do nothing, on RMB reject it
+	static int confirming = 0;
 	static CvPoint new_point;
 	static IplImage *temp_img = createBlankCopy(data->img);
-	static int confirming = 0;
 
 	if(!confirming) {
 		if(event == CV_EVENT_LBUTTONUP) {
-			new_point = cvPoint(x,y);		
+			new_point = cvPoint(x,y);
 
 			// draw new image
 			cvCopy(data->img, temp_img);
@@ -538,18 +528,12 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 	} else {
 		if(event == CV_EVENT_LBUTTONUP && confirming == 1) {
 			// add point to sequence
-			/*float scale_x = (int)(data->resolution->height/600.);
-			float scale_y = (int)(data->resolution->width/800.);*/
-
-			x = new_point.x;
-			y = new_point.y;
-
-			float scale_x = 1;
-			float scale_y = 1;
-
-			cout<<"added: ("<<x*scale_x<<", "<<y*scale_y<<")\n";
+			float scale_x = (int)((CUE_PYRDOWN_WIDTH+0.)/data->resolution->height);
+			float scale_y = (int)((CUE_PYRDOWN_HEIGHT+0.)/data->resolution->width);
 
 			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
+
+			cout<<"added: ("<<new_point_scaled.x<<", "<<new_point_scaled.y<<")\n";
 
 			CV_WRITE_SEQ_ELEM(new_point_scaled, *(data->writer));
 
@@ -565,6 +549,7 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 	}
 }
 
+/* this lets the user mark the edges of the projection area */
 void learn_edges(CvSize resolution, int device_id) {
 	// init camera
 	VideoCapture capture(0, resolution.width, resolution.height);
@@ -583,11 +568,6 @@ void learn_edges(CvSize resolution, int device_id) {
 	capture.waitFrame(pre_image); // capture frame
 	cvWarpPerspective(pre_image, image,	H,
 		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
-	if(resolution.width > 800) {
-		cvPyrDown(image, scaled_image);
-	} else {
-		cvCopy(image, scaled_image);
-	}
 
 	cvShowImage("Edges Marker", scaled_image);
 
@@ -596,7 +576,7 @@ void learn_edges(CvSize resolution, int device_id) {
 	CvSeqWriter writer;
 	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
 
-	struct border_data data;
+	struct seq_data data;
 	data.img = scaled_image;
 	data.resolution = &resolution;
 	data.writer = &writer;
@@ -622,13 +602,15 @@ void learn_edges(CvSize resolution, int device_id) {
 }
 
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
-	struct border_data *data = (struct border_data *)param;
+	struct seq_data *data = (struct seq_data *)param;
 
 	static CvPoint new_point;
 	static IplImage *temp_img = createBlankCopy(data->img);
 	static int confirming = 0;
 
-	if(!confirming) {		
+	// pretty much the same as borders marking
+
+	if(!confirming) {
 		if(event == CV_EVENT_LBUTTONUP) {
 			new_point = cvPoint(x,y);		
 
@@ -643,17 +625,9 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	} else {
 		if(event == CV_EVENT_LBUTTONUP) {
 			// add point to sequence
-			x = new_point.x;
-			y = new_point.y;
+			cout<<"added: ("<<x<<", "<<y<<")\n";
 
-			float scale_x = (int)(data->resolution->height/600.);
-			float scale_y = (int)(data->resolution->width/800.);
-
-			cout<<"added: ("<<x*scale_x<<", "<<y*scale_y<<")\n";
-
-			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
-
-			CV_WRITE_SEQ_ELEM(new_point_scaled, *(data->writer));
+			CV_WRITE_SEQ_ELEM(cvPoint(x, y), *(data->writer));
 
 			cvCopy(temp_img, data->img);
 
@@ -666,6 +640,7 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	}
 }
 
+/* this lets the user watch the camera image fixed using the matrices */
 void watch(CvSize resolution, bool with_birds_eye, int device_id) {
 	char filename[100];
 	_snprintf_s(filename, 100, "Intrinsics-%d.xml", device_id);

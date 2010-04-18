@@ -7,32 +7,42 @@
 using namespace std;
 
 /* Finds the point which best matches the template */
-void findTemplate(IplImage *img, IplImage *templ, CvPoint *p, bool debug) {
+void findTemplate(IplImage *img, IplImage *templ, CvPoint *p) {
+
 	CvSize img_s = cvGetSize(img);
 	CvSize templ_s = cvGetSize(templ);
+
+	// create an image the size the correlation function return
 	IplImage *match = cvCreateImage(cvSize(img_s.width - templ_s.width + 1,
 		img_s.height - templ_s.height + 1), IPL_DEPTH_32F, 1);
 
+	// get the correlation image
 	cvMatchTemplate(img, templ, match, CV_TM_CCORR_NORMED);
 
-	CvPoint min_p;
-	cvMinMaxLoc(match, 0, 0, 0, &min_p/*, 0*/, 0);
+	// find the maximal correlation
+	CvPoint max_p;
+	cvMinMaxLoc(match, 0, 0, 0, &max_p, 0);
 
-	if(debug) {
-		cvNamedWindow("Template matching", CV_WINDOW_AUTOSIZE);
+	if(FIND_TEMPL_DEBUG) {
+		// paint the corr. and the circle on match_draw
 		IplImage *match_draw = createBlankCopy(match, 3);
-		cvMerge(match, match, match, 0, match_draw);
-		cvCircle(match_draw, min_p, 1, cvScalar(0xff, 0), 2);
+		cvCvtColor(match, match_draw, CV_GRAY2BGR);
+		cvCircle(match_draw, max_p, 1, cvScalar(0xff, 0), 2);
+
+		cvNamedWindow("Template matching", CV_WINDOW_AUTOSIZE);
 		cvShowImageWrapper("Template matching", match_draw);
-		cvReleaseImage(&match_draw);
 		cvWaitKey(0);
 		cvDestroyWindow("Template matching");
+
+		cvReleaseImage(&match_draw);
 	}
 
-	cvReleaseImage(&match);
+	// fix the position of the maximal correlation to be the middle of the
+	// template
+	p->x = max_p.x + (templ->width)/2;
+	p->y = max_p.y + (templ->height)/2;
 
-	p->x = min_p.x + (templ->width)/2;
-	p->y = min_p.y + (templ->height)/2;
+	cvReleaseImage(&match);
 }
 
 /* This returns a sequence of CvPoints specifying the contour of the
