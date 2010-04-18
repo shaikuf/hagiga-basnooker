@@ -104,6 +104,36 @@ void filterSimiliarLines(CvSeq *lines, double m_thresh, double n_thresh) {
 	}
 }
 
+void filterLinesByWhiteBall(CvSeq *lines, CvPoint2D32f white_center, double radius) {
+	white_center.x /= 2;
+	white_center.y /= 2;
+	cout<<"white: ("<<white_center.x<<", "<<white_center.y<<")\n";
+
+	for(int i = 0; i < lines->total; i++) {
+		CvPoint *line = (CvPoint*)cvGetSeqElem(lines, i);
+
+		//double m = ((double)(line[1].y - line[0].y + 0.))/(line[1].x - line[0].x);
+		//double n = (double)line[0].y - m*line[0].x;
+
+		//double dist_from_white = abs(white_center.y - m*white_center.x - n)/(m*m + 1);
+		double dist_from_white = abs((white_center.x-line[1].x)*(line[1].y-line[0].y) \
+			- (line[1].x-line[0].x)*(white_center.y-line[1].y)) \
+			/ sqrt((white_center.x-line[1].x)*(white_center.x-line[1].x) +\
+			(white_center.y-line[1].y)*(white_center.y-line[1].y));
+
+		if(dist_from_white > radius) {
+			cvSeqRemove(lines, i);
+			i--;
+		}
+
+		cout<<"dist from: "<<"("<<line[0].x<<", "<<line[0].y<<") -> (";
+		cout<<line[1].x<<", "<<line[1].y<<") is "<<dist_from_white<<"\n";
+		//cout<<"m="<<m<<" n="<<n<<endl<<endl;
+	}
+	cout<"==================\n";
+}
+
+
 /* This filters lines which are completely outside tableBorders() */
 void filterLinesOnTable(CvSeq *lines) {
 	// the contour of the board playable area
@@ -186,7 +216,7 @@ void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 	IplImage* src_ds = cvCreateImage(cvSize(800,600), src->depth, src->nChannels);
 	cvPyrDown(src, src_ds, CV_GAUSSIAN_5x5);
 
-	findCue(src_ds, cue_m, cue_cm);
+	findCue(src_ds, cue_m, cue_cm, white_center);
 
 	cue_cm->x *= src->width/800;
 	cue_cm->y *= src->height/600;
@@ -281,7 +311,7 @@ void filterLinesByHistogram(IplImage *src, CvSeq *lines, int nbins, int width,
 }
 
 /* This finds the center-of-mass and slope of the cue in the given image */
-void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug) {
+void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, CvPoint2D32f white_center, bool debug) {
 	debug = true;
 
 	static bool create_wnd = true;
@@ -319,6 +349,18 @@ void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug) {
 	int width = 5;
 	double corr_thresh = .55;
 	//filterLinesByHistogram(src, lines, nbins, width, corr_thresh);
+
+	if(debug) {
+		// debug -- draw the found lines
+		for(int i = 0; i < lines->total; i++) {
+			CvPoint* line = (CvPoint*)cvGetSeqElem(lines,i);
+			cvLine(src, line[0], line[1], CV_RGB(0,0,255), 3, 8 );
+		}
+	}
+
+	// filter by white ball
+	double radius = 10;
+	//filterLinesByWhiteBall(lines, white_center, radius);
 
 	if(debug) {
 		// debug -- draw the found lines

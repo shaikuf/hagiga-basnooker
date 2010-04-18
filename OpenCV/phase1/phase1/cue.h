@@ -9,7 +9,7 @@ void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 			 double *cue_m, CvPoint *cue_cm);
 
 /* This finds the center-of-mass and slope of the cue in the given image */
-void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, bool debug = false);
+void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, CvPoint2D32f white_center, bool debug = false);
 
 /* This filters lines which are completely outside tableBorders() */
 void filterLinesOnTable(CvSeq *lines);
@@ -20,6 +20,8 @@ void filterSimiliarLines(CvSeq *lines, double m_thresh, double n_thresh);
 /* This filters lines with not-near-enough-to-template histogram around them */
 void filterLinesByHistogram(IplImage *src, CvSeq *lines, int nbins, int width,
 							 double corr_thresh);
+
+void filterLinesByWhiteBall(CvSeq *lines, CvPoint2D32f white_center, double radius);
 
 /* This returns the histogram taken around a line in the given image */
 CvHistogram *hueHistFromLine(IplImage *img, CvPoint p1, CvPoint p2, int width,
