@@ -541,6 +541,9 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 			/*float scale_x = (int)(data->resolution->height/600.);
 			float scale_y = (int)(data->resolution->width/800.);*/
 
+			x = new_point.x;
+			y = new_point.y;
+
 			float scale_x = 1;
 			float scale_y = 1;
 
@@ -625,7 +628,7 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	static IplImage *temp_img = createBlankCopy(data->img);
 	static int confirming = 0;
 
-	if(!confirming) {
+	if(!confirming) {		
 		if(event == CV_EVENT_LBUTTONUP) {
 			new_point = cvPoint(x,y);		
 
@@ -640,6 +643,9 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	} else {
 		if(event == CV_EVENT_LBUTTONUP) {
 			// add point to sequence
+			x = new_point.x;
+			y = new_point.y;
+
 			float scale_x = (int)(data->resolution->height/600.);
 			float scale_y = (int)(data->resolution->width/800.);
 
