@@ -12,8 +12,8 @@ void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
 	findTemplate(img, templ, &p);
 
 	// we have no sub-pixel accuracy yet
-	center->x = p.x;
-	center->y = p.y;
+	center->x = (float)p.x;
+	center->y = (float)p.y;
 }
 
 /* This uses findBall() and marks the results on the image */
@@ -77,8 +77,8 @@ CvPoint2D32f fixPosition(CvPoint2D32f center) {
 
 	CvPoint2D32f res;
 
-	res.x = A/X;
-	res.y = 1+B/Y;
+	res.x = (float)(A/X);
+	res.y = (float)(1+B/Y);
 
 	return res;
 }

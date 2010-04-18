@@ -13,5 +13,5 @@ public:
 	int update();
 
 	void send_white_pos(float x, float y);
-	void send_theta(float theta);
+	void send_theta(double theta);
 };

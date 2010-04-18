@@ -6,78 +6,6 @@
 
 using namespace std;
 
-/* This returns the histogram taken around a line in the given image */
-CvHistogram *hueHistFromLine(IplImage *img, CvPoint p1, CvPoint p2, int width,
-							 int nbins) {
-	IplImage *hsv = createBlankCopy(img);
-	cvCvtColor(img, hsv, CV_BGR2HSV);
-	IplImage *h = createBlankCopy(hsv, 1);
-	IplImage *s = createBlankCopy(hsv, 1);
-	IplImage *v = createBlankCopy(hsv, 1);
-	cvSplit(hsv, h, s, v, 0);
-
-	cvReleaseImage(&s);
-	cvReleaseImage(&v);
-	cvReleaseImage(&hsv);
-
-	float h_range[] = {0., 180.};
-	float *ranges[] = {h_range};
-	CvHistogram *hist = cvCreateHist(1, &nbins, CV_HIST_ARRAY, (float **)ranges, 1);
-
-	IplImage *mask = createBlankCopy(img, 1);
-	cvSet(mask, cvScalar(0));
-	cvLine( mask, p1, p2, cvScalar(255), width);
-
-	cvCalcHist(&h, hist, 0, mask);
-	cvReleaseImage(&mask);
-	cvReleaseImage(&h);
-
-	cvNormalizeHist(hist, 1.);
-
-	return hist;
-}
-
-/* This returns the histogram taken around the cue in a specific sample
-image */
-CvHistogram *cueHistogram(int width, int nbins) {
-	CvRect crop = cvRect(0, 0, 1600, 850);
-	CvSize size = cvSize(800, 425);
-
-	IplImage *src = cvLoadImage("C:\\Projecton\\Test\\Testing\\"
-		"Picture 22.jpg"); 
-	normalize(src, crop, size);
-
-	IplImage *gray = createBlankCopy(src, 1);
-	cvCvtColor(src, gray, CV_BGR2GRAY);
-
-	IplImage *edge = createBlankCopy(gray);
-	cvCanny(gray, edge, 150, 50);
-
-	CvMemStorage *storage = cvCreateMemStorage(0);
-	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 80, 50, 50);
-
-	// filter lines not on the board
-	//filterLinesOnTable(lines);
-
-	// filter very similar lines
-	double m_thresh = 0.05;
-	double n_thresh = 10;
-	filterSimiliarLines(lines, m_thresh, n_thresh);
-	
-
-	CvPoint *line = (CvPoint*)cvGetSeqElem(lines, 1);
-
-	CvHistogram *hist = hueHistFromLine(src, line[0], line[1], width, nbins);
-	cvSet1D(hist->bins, 20, cvScalar(0));
-
-	cvReleaseImage(&src);
-	cvReleaseImage(&gray);
-	cvReleaseImage(&edge);
-	cvReleaseMemStorage(&storage);
-
-	return hist;
-}
-
 /* This filters lines with very similiar slope and position */
 void filterSimiliarLines(CvSeq *lines, double m_thresh, double n_thresh) {
 	for(int i = 0; i < lines->total; i++) {
@@ -97,40 +25,11 @@ void filterSimiliarLines(CvSeq *lines, double m_thresh, double n_thresh) {
 				j--;
 			}
 		}
-
-		//cout<<"("<<line[0].x<<", "<<line[0].y<<") -> (";
-		//cout<<line[1].x<<", "<<line[1].y<<")\n";
-		//cout<<m<<" "<<n<<endl;
 	}
 }
 
 void filterLinesByWhiteBall(CvSeq *lines, CvPoint2D32f white_center, double radius) {
-	white_center.x /= 2;
-	white_center.y /= 2;
-	cout<<"white: ("<<white_center.x<<", "<<white_center.y<<")\n";
-
-	for(int i = 0; i < lines->total; i++) {
-		CvPoint *line = (CvPoint*)cvGetSeqElem(lines, i);
-
-		//double m = ((double)(line[1].y - line[0].y + 0.))/(line[1].x - line[0].x);
-		//double n = (double)line[0].y - m*line[0].x;
-
-		//double dist_from_white = abs(white_center.y - m*white_center.x - n)/(m*m + 1);
-		double dist_from_white = abs((white_center.x-line[1].x)*(line[1].y-line[0].y) \
-			- (line[1].x-line[0].x)*(white_center.y-line[1].y)) \
-			/ sqrt((white_center.x-line[1].x)*(white_center.x-line[1].x) +\
-			(white_center.y-line[1].y)*(white_center.y-line[1].y));
-
-		if(dist_from_white > radius) {
-			cvSeqRemove(lines, i);
-			i--;
-		}
-
-		cout<<"dist from: "<<"("<<line[0].x<<", "<<line[0].y<<") -> (";
-		cout<<line[1].x<<", "<<line[1].y<<") is "<<dist_from_white<<"\n";
-		//cout<<"m="<<m<<" n="<<n<<endl<<endl;
-	}
-	cout<"==================\n";
+	/* TODO */
 }
 
 
@@ -154,8 +53,7 @@ void filterLinesOnTable(CvSeq *lines) {
 	cvReleaseMemStorage(&mem);
 }
 
-/* This finds the mean slope for the given sequence of lines.
-Actually it returns the average slope for the two extreme slopes.*/
+/* This finds the mean slope the two extreme slopes.*/
 void meanLine(CvSeq *lines, double *dst_m) {
 	int max_i, min_i;
 	double max_m = 0, min_m = 0;
@@ -209,129 +107,85 @@ void meanCM(CvSeq *lines, CvPoint *dst_cm) {
 
 /* This uses findCue() and marks the results on the image (around the white
 ball) */
-void markCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
+void findAndMarkCue(IplImage *src, CvPoint2D32f white_center, float white_radius,
 			 double *cue_m, CvPoint *cue_cm) {
 	
-	
-	IplImage* src_ds = cvCreateImage(cvSize(800,600), src->depth, src->nChannels);
+	// downsample the image
+	IplImage* src_ds = cvCreateImage(cvSize(CUE_PYRDOWN_WIDTH, CUE_PYRDOWN_HEIGHT),
+		src->depth, src->nChannels);
 	cvPyrDown(src, src_ds, CV_GAUSSIAN_5x5);
 
+	// find the cue
 	findCue(src_ds, cue_m, cue_cm, white_center);
 
-	cue_cm->x *= src->width/800;
-	cue_cm->y *= src->height/600;
+	// fix the coordinates
+	cue_cm->x *= src->width/CUE_PYRDOWN_WIDTH;
+	cue_cm->y *= src->height/CUE_PYRDOWN_HEIGHT;
 
-	static bool debug_once = true;
+	// show debug image
+	static bool debug_once = CUE_MARK_DEBUG;
 	if(debug_once) {
 		cvNamedWindow("pyr down");
 		debug_once = false;
 	}
-	cvShowImage("pyr down", src_ds);
-	cvReleaseImage(&src_ds);
+	if(CUE_MARK_DEBUG) {
+		cvShowImage("pyr down", src_ds);
+		cvReleaseImage(&src_ds);
+	}
 
+	// if we couldn't find the cue stick
 	if(cue_cm->x == 0 && cue_cm->y == 0)
 		return;
 	
-	int cue_sign = (int)(fabs(*cue_m)/(*cue_m));
-	*cue_m = fabs(*cue_m);
+	// draw blue line on src
+	if(CUE_MARK_DEBUG) {
+		double cue_m_abs = fabs(*cue_m);
+		int cue_sign = (int)(cue_m_abs/(*cue_m));
 
-	double length = 100;
-	CvPoint p1, p2;
+		double length = 100;
+		CvPoint p1, p2;
 
-	int x_sign = 1;
-	if(cue_cm->x < white_center.x) {
-		// if we're pointing from the left of the ball
-		x_sign = -1;
-	}
-	int y_sign = cue_sign;
-
-	white_radius = white_radius + 5*downscale_factor;
-	p1.x = cvRound(white_center.x + x_sign*(white_radius/sqrt(*cue_m+1)));
-	p1.y = cvRound(white_center.y + y_sign*(p1.x - white_center.x)*(*cue_m));
-
-	p2.x = p1.x + x_sign*cvRound(length/sqrt(*cue_m+1));
-	p2.y = p1.y + y_sign*cvRound((p2.x-p1.x)*(*cue_m));
-
-	cvLine(src, p1, p2, cvScalar(255, 0, 0), 3);
-}
-
-/* This filters lines with not-near-enough-to-template histogram around them */
-void filterLinesByHistogram(IplImage *src, CvSeq *lines, int nbins, int width,
-							 double corr_thresh) {
-	bool debug = false;
-
-	CvHistogram *cueHist = cueHistogram(width, nbins);
-
-	if(debug) {
-		cvNamedWindow("Histogram", CV_WINDOW_AUTOSIZE);
-		cvNamedWindow("Stick", CV_WINDOW_AUTOSIZE);
-		
-		cvNamedWindow("Template Histogram", CV_WINDOW_AUTOSIZE);
-		drawHistogram("Template Histogram", cueHist, nbins);
-	}
-
-	for(int i = 0; i < lines->total; i++) {
-		CvPoint *line = (CvPoint*)cvGetSeqElem(lines, i);
-
-		CvHistogram *hist = hueHistFromLine(src, line[0], line[1], width,
-			nbins);
-
-		double corr = cvCompareHist(hist, cueHist, CV_COMP_CORREL);
-		if(debug) {
-			cout<<corr<<endl;
+		int x_sign = 1;
+		if(cue_cm->x < white_center.x) {
+			// if we're pointing from the left of the ball
+			x_sign = -1;
 		}
+		int y_sign = cue_sign;
 
-		if(corr > corr_thresh) {
-			if(debug) {
-				cvLine( src, line[0], line[1], cvScalar(255), 2);
-			}
-		} else {
-			cvSeqRemove(lines, i);
-			i--;
-			if(debug) {
-				cvLine( src, line[0], line[1], cvScalar(0, 0, 255), 2);
-			}
-		}
+		white_radius = white_radius + 5;
+		p1.x = cvRound(white_center.x + x_sign*(white_radius/sqrt(*cue_m+1)));
+		p1.y = cvRound(white_center.y + y_sign*(p1.x - white_center.x)*(*cue_m));
 
-		if(debug) {
-			drawHistogram("Histogram", hist, nbins);
-			cvShowImageWrapper("Stick", src);
-			cvWaitKey(0);
-		}
+		p2.x = p1.x + x_sign*cvRound(length/sqrt(*cue_m+1));
+		p2.y = p1.y + y_sign*cvRound((p2.x-p1.x)*(*cue_m));
 
-		cvReleaseHist(&hist);
-	}
-	cvReleaseHist(&cueHist);
-
-	if(debug) {
-		cvDestroyWindow("Histogram");
-		cvDestroyWindow("Stick");
-		cvDestroyWindow("Template Histogram");
+		cvLine(src, p1, p2, cvScalar(255, 0, 0), 3);
 	}
 }
 
 /* This finds the center-of-mass and slope of the cue in the given image */
-void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, CvPoint2D32f white_center, bool debug) {
-	debug = true;
-
-	static bool create_wnd = true;
-	if(create_wnd && debug) {
+void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, CvPoint2D32f white_center) {
+	static bool first_debug = CUE_FIND_DEBUG;
+	if(first_debug) {
 		cvNamedWindow("gray image");
 		cvNamedWindow("edge image");
-		create_wnd = false;
+		first_debug = false;
 	}
 
+	// create grayscale image
 	IplImage *gray = createBlankCopy(src, 1);
 	cvCvtColor(src, gray, CV_BGR2GRAY);
 
+	// create edge image
 	IplImage *edge = createBlankCopy(gray);
 	cvCanny(gray, edge, 250, 150);
 
-	if(debug) {
+	if(CUE_FIND_DEBUG) {
 		cvShowImage("gray image", gray);
 		cvShowImage("edge image", edge);
 	}
 
+	// find lines
 	CvMemStorage *storage = cvCreateMemStorage(0);
 	CvSeq *lines = cvHoughLines2(edge, storage, CV_HOUGH_PROBABILISTIC, 0.5, 0.5*CV_PI/180, 30, 30, 5);
 
@@ -345,28 +199,20 @@ void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, CvPoint2D32f white_c
 	filterSimiliarLines(lines, m_thresh, n_thresh);
 
 	// filter the cue using histogram
-	int nbins = 30;
+	/*int nbins = 30;
 	int width = 5;
 	double corr_thresh = .55;
-	//filterLinesByHistogram(src, lines, nbins, width, corr_thresh);
+	filterLinesByHistogram(src, lines, nbins, width, corr_thresh);*/
 
-	if(debug) {
-		// debug -- draw the found lines
+	// filter by white ball
+	/*double radius = 15;
+	filterLinesByWhiteBall(lines, white_center, radius);*/
+
+	if(CUE_FIND_DEBUG) {
+		// draw the filtered lines
 		for(int i = 0; i < lines->total; i++) {
 			CvPoint* line = (CvPoint*)cvGetSeqElem(lines,i);
 			cvLine(src, line[0], line[1], CV_RGB(0,0,255), 3, 8 );
-		}
-	}
-
-	// filter by white ball
-	double radius = 10;
-	//filterLinesByWhiteBall(lines, white_center, radius);
-
-	if(debug) {
-		// debug -- draw the found lines
-		for(int i = 0; i < lines->total; i++) {
-			CvPoint* line = (CvPoint*)cvGetSeqElem(lines,i);
-			cvLine(src, line[0], line[1], CV_RGB(255,0,0), 3, 8 );
 		}
 	}
 
@@ -380,15 +226,17 @@ void findCue(IplImage *src, double *cue_m, CvPoint *cue_cm, CvPoint2D32f white_c
 	cvReleaseMemStorage(&storage);
 }
 
-float line2theta(double cue_m, CvPoint cue_cm, CvPoint2D32f white_center) {
-	float theta;
+/* Convert the line from center of mass and slope to theta */
+double line2theta(double cue_m, CvPoint cue_cm, CvPoint2D32f white_center) {
+	double theta;
 
-	if(isinf(cue_m)) {
+	if(isinf(cue_m)) { // perpendicular line
 		if(cue_cm.y < white_center.y)
 			theta = PI/2;
 		else
 			theta = 3*PI/2;
-	} else {
+
+	} else { // non-perpendicular line
 		cue_m = fabs(cue_m);
 		if(cue_cm.x < white_center.x) {
 			if(cue_cm.y < white_center.y) {
