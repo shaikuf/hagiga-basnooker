@@ -14,9 +14,6 @@
 
 using namespace std;
 
-int downscale_factor = 1;
-bool save_images = false;
-
 int main(int argc, char* argv[])
 {
 	CvSize resolution = cvSize(1600, 1200);
@@ -35,14 +32,14 @@ int main(int argc, char* argv[])
 
 	if(mode == 2) {
 		// calibrate camera
-		calibration(4, 4, 12, 29.0, 21.0, resolution, 0);
+		calibration(4, 4, 12, 29.7f, 21.0f, resolution, 0);
 		//calibration(5, 3, 12, 29.7, 29.7, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
-		birds_eye(4, 4, 29.7, 21.0, resolution, 0);
+		birds_eye(4, 4, 29.7f, 21.0f, resolution, 0);
 	} else if(mode == 0) {
 		// main loop
-		gameLoop(resolution);
+		gameLoop(resolution, 0);
 	} else if(mode == 3) {
 		// grab templates
 		grab_templates(resolution, 0);
@@ -61,18 +58,15 @@ int main(int argc, char* argv[])
 }
 
 /* The main loop of the program */
-void gameLoop(CvSize resolution) {
+void gameLoop(CvSize resolution, int device_id) {
 	// init camera
-	int device_id = 0;
-
 	VideoCapture capture(device_id, resolution.width, resolution.height);
 	IplImage *pre_image = capture.CreateCaptureImage();
 	IplImage *image = capture.CreateCaptureImage();
 
 	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
 
-	// load data from files and initialize
-	int opt_count = 1;
+	// load ball templates
 	IplImage *templates[8];
 	char *filenames[] = {"white-templ.jpg", "red-templ.jpg", "blue-templ.jpg",
 		"yellow-templ.jpg", "green-templ.jpg", "pink-templ.jpg", "brown-templ.jpg",
@@ -84,16 +78,21 @@ void gameLoop(CvSize resolution) {
 	float ball_radius[8];
 
 	int i;
-	for(i=0; i<opt_count; i++) {
+	for(i=0; i<NUM_BALLS; i++) {
 		templates[i] = cvLoadImage(filenames[i]);
 		ball_center[i] = cvPoint2D32f(0, 0);
 		ball_radius[i] = 1;
 	}
 
-	char filename[100];
-	_snprintf_s(filename, 100, "H-%d.xml", device_id);
-	CvMat* H = (CvMat*)cvLoad(filename);
+	// load projective transformation matrix
+	CvMat* H;
+	if(USE_BIRDS_EYE) {
+		char filename[100];
+		_snprintf_s(filename, 100, "H-%d.xml", device_id);
+		H = (CvMat*)cvLoad(filename);
+	}
 
+	// initialization
 	double cue_m;
 	CvPoint cue_cm;
 
@@ -102,47 +101,46 @@ void gameLoop(CvSize resolution) {
 	TCPServer tcp_server;
 	
 	// main loop
-	
 	char c=0;
 	while(c != 'q') {
-		/*if(c == 'c')
-			find_balls = true;*/
+		// check for messages from the client
 		if(tcp_server.update())
 			find_balls = true;
 
 		// get and fix frame
 		capture.waitFrame(pre_image); // capture frame
-		cvWarpPerspective(pre_image, image,	H,
-			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+		if(USE_BIRDS_EYE) {
+			cvWarpPerspective(pre_image, image,	H,
+				CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+		} else {
+			cvCopy(pre_image, image);
+		}
 
 		// find balls
 		if(find_balls) {
-			for(i=0; i<opt_count; i++)
+			for(i=0; i<NUM_BALLS; i++)
 				findBall(image, templates[i], &ball_center[i], &ball_radius[i]);
 
 			find_balls = false;
 
+			// send white ball to client
 			CvPoint2D32f normed_pos = fixPosition(ball_center[0]);
 			tcp_server.send_white_pos(normed_pos.x, normed_pos.y);
 			cout<<"Sending: ("<<normed_pos.x<<", "<<normed_pos.y<<")\n";
 		}
 
-		// find cue
-
 		// mark balls
-		for(i=0; i<opt_count; i++) {
+		for(i=0; i<NUM_BALLS; i++) {
 			markBall(image, ball_center[i], ball_radius[i], colors[i], false);
 		}
 
 		// mark cue
-		markCue(image, ball_center[0], ball_radius[0], &cue_m, &cue_cm);
+		findAndMarkCue(image, ball_center[0], ball_radius[0], &cue_m, &cue_cm);
 		
 		if(cue_cm.x != 0 || cue_cm.y != 0) { // we found the cue
-			float theta = line2theta(cue_m, cue_cm, ball_center[0]);
+			double theta = line2theta(cue_m, cue_cm, ball_center[0]);
 			
-			/*cout<<"m="<<cue_m<<endl<<"cm.x="<<cue_cm.x<<" cm.y="<<cue_cm.y<<endl;
-			cout<<"theta="<<theta<<endl;*/
-
+			// send angle to client
 			tcp_server.send_theta(theta);
 		}
 
@@ -155,6 +153,6 @@ void gameLoop(CvSize resolution) {
 
 	cvReleaseImage(&pre_image);
 	cvReleaseImage(&image);
-	for(i=0; i<opt_count; i++)
+	for(i=0; i<NUM_BALLS; i++)
 		cvReleaseImage(&templates[i]);
 }

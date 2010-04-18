@@ -39,7 +39,7 @@ TCPServer::TCPServer(int port) {
 
 		// Resolve the local address and port to be used by the server
 	char port_str[128];
-	sprintf(port_str, "%d", _port);
+	_snprintf_s(port_str, 128, "%d", _port);
 	retval = getaddrinfo(NULL, port_str, &hints, &result);
 	if (retval != 0) {
 		printf("getaddrinfo failed: %d\n", retval);
@@ -91,7 +91,7 @@ TCPServer::~TCPServer() {
 }
 
 int TCPServer::update() {
-	if(_client == 0) {
+	if(_client == 0) { // IF WE HAVE NO CLIENT
 		// accept a client socket
 		_client = INVALID_SOCKET;
 		_client = accept(_listener, NULL, NULL);
@@ -107,16 +107,18 @@ int TCPServer::update() {
 		}
 
 		return 0;
-	} else {
+	} else { // WE HAVE A CLIENT
 		// try to receive
-
 		char buf[128];
 		int retval = recv(_client, buf, 128, 0);
 
-		if(retval == 0) {
+		if(retval == 0) { // connection closed
 			closesocket(_client);
 			_client = 0;
-		} else if(retval == -1) {
+
+			return 0;
+
+		} else if(retval == -1) { // error
 			if(WSAGetLastError() == WSAEWOULDBLOCK) {
 				// pass
 			} else {
@@ -136,19 +138,19 @@ void TCPServer::send_white_pos(float x, float y) {
 		return;
 
 	char buf[128];
-	sprintf(buf, "c%f,%f\n", x, y);
+	_snprintf_s(buf, 128, "c%f,%f\n", x, y);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
 		printf("Error at send(): %ld\n", WSAGetLastError());
 		exit(1);
 	}
 }
 
-void TCPServer::send_theta(float theta) {
+void TCPServer::send_theta(double theta) {
 	if(_client == 0)
 		return;
 
 	char buf[128];
-	sprintf(buf, "%f\n", theta);
+	_snprintf_s(buf, 128, "%f\n", theta);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
 		printf("Error at send(): %ld\n", WSAGetLastError());
 		exit(1);

@@ -386,8 +386,8 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	IplImage *img = (IplImage *)param;
 
 	// fix the x-y got from OpenCV (i don't know why! it's bad!)
-	x /= 1.25;
-	y /= 1.172;
+	x = (int)(x/1.25);
+	y = (int)(y/1.172);
 
 	int crop_size = 100;
 	
@@ -528,8 +528,8 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 	} else {
 		if(event == CV_EVENT_LBUTTONUP && confirming == 1) {
 			// add point to sequence
-			float scale_x = (int)((CUE_PYRDOWN_WIDTH+0.)/data->resolution->height);
-			float scale_y = (int)((CUE_PYRDOWN_HEIGHT+0.)/data->resolution->width);
+			float scale_x = (float)floor((CUE_PYRDOWN_WIDTH+0.0f)/data->resolution->height);
+			float scale_y = (float)floor((CUE_PYRDOWN_HEIGHT+0.0f)/data->resolution->width);
 
 			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
 

@@ -1,7 +1,5 @@
 #include <cv.h>
 #include <highgui.h>
-#include <limits>
-#include <cmath>
 #include "misc.h"
 
 using namespace std;
@@ -30,7 +28,7 @@ void findTemplate(IplImage *img, IplImage *templ, CvPoint *p) {
 		cvCircle(match_draw, max_p, 1, cvScalar(0xff, 0), 2);
 
 		cvNamedWindow("Template matching", CV_WINDOW_AUTOSIZE);
-		cvShowImageWrapper("Template matching", match_draw);
+		cvShowImage("Template matching", match_draw);
 		cvWaitKey(0);
 		cvDestroyWindow("Template matching");
 
@@ -70,38 +68,6 @@ void drawBorders(IplImage *dst, int width) {
 	cvReleaseMemStorage(&mem);
 }
 
-/* This draws a visualization image of the given histogram, on the window
-with the given name */
-void drawHistogram(char *name, CvHistogram *hist, int nbins) {
-	//create an image to hold the histogram
-	IplImage* histImage = cvCreateImage(cvSize(320,200), 8, 1);
-
-	//grab the min and max values and their indeces
-	float min_value, max_value;
-	cvGetMinMaxHistValue( hist, &min_value, &max_value);
-	//scale the bin values so that they will fit in the image representation
-	cvScale( hist->bins, hist->bins, ((double)histImage->height)/max_value, 0 );
-
-	//set all histogram values to 255
-	cvSet( histImage, cvScalarAll(255), 0 );
-	//create a factor for scaling along the width
-	int bin_w = cvRound((double)histImage->width/nbins);
-
-	for(int k = 0; k < nbins; k++ ) {
-		//draw the histogram data onto the histogram image
-		cvRectangle( histImage, cvPoint(k*bin_w, histImage->height),
-		   cvPoint((k+1)*bin_w, 
-		   histImage->height - cvRound(cvGetReal1D(hist->bins,k))),
-		   cvScalarAll(0), -1, 8, 0 );
-		//get the value at the current histogram bucket
-		float* bins = cvGetHistValue_1D(hist,k);
-	}
-
-	cvShowImageWrapper(name, histImage);
-
-	cvReleaseImage(&histImage);
-}
-
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */
 IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
@@ -112,51 +78,3 @@ IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
 
 	return cvCreateImage(cvGetSize(src), depth, channels);
 }
-
-/* This resizes images before showing them (and possibly saves to a file)
-so that they would fit on the screen */
-void cvShowImageWrapper(const char *name, IplImage *image) {
-	if(save_images) {
-		char filename[1024];
-		static int num = 0;
-		_snprintf_s(filename, 1024, "C:\\Projecton\\Test\\Results\\%d.jpg", num);
-		num++;
-		IplImage *copy = createBlankCopy(image, image->nChannels, IPL_DEPTH_8U);
-		cvConvertImage(image, copy);
-		cvSaveImage(filename, copy);
-		cvReleaseImage(&copy);
-	}
-
-	CvRect crop;
-	CvSize size;
-
-
-	if(cvGetSize(image).width == 1600 && cvGetSize(image).height == 1200) {
-		crop = cvRect(0, 0, 1600, 850);
-		size = cvSize(800, 425);
-	} else if(cvGetSize(image).width == 1553 && cvGetSize(image).height == 1155) {
-		crop = cvRect(0, 0, 1550, 1150);
-		size = cvSize(775, 575);
-	} else if(cvGetSize(image).width == 1553 && cvGetSize(image).height == 805) {
-		crop = cvRect(0, 0, 1550, 800);
-		size = cvSize(775, 400);
-	} else {
-		cvShowImage(name, image);
-		return;
-	}
-
-	IplImage *temp = cvCloneImage(image);
-	normalize(temp, crop, size);
-	cvShowImage(name, temp);
-	cvReleaseImage(&temp);
-}
-
-/* Normalize the image for debugging, so it could fit on the screen. */
-void normalize(IplImage* &img, CvRect crop, CvSize size) {
-	cvSetImageROI(img, crop);
-	IplImage *img_new = cvCreateImage(size, img->depth, img->nChannels);
-	cvPyrDown(img, img_new);
-	cvReleaseImage(&img);
-	img = img_new;
-}
-
