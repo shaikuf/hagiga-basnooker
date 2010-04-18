@@ -2,8 +2,8 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="phase1"
-	ProjectGUID="{0CC8BD44-E643-4933-93FD-18EEF603F093}"
+	Name="phase2"
+	ProjectGUID="{66F8EAB3-6D76-4B31-96BD-279D1C65EB72}"
 	RootNamespace="testing"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="196613"
