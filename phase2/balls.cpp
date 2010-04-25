@@ -1,7 +1,10 @@
 #include <cv.h>
 #include <highgui.h>
+#include <iostream>
 #include "balls.h"
 #include "misc.h"
+
+using namespace std;
 
 /* This finds the ball matching the given template on the image */
 void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
@@ -69,6 +72,8 @@ CvPoint2D32f fixPosition(CvPoint2D32f center) {
 
 	double theta = atan2((double)p2.y-p3.y, p2.x-p3.x);
 	double alpha = atan2(center.y-p3.y, center.x-p3.x);
+
+	cout<<"theta="<<theta*180/PI<<"\n"<<"alpha="<<alpha*180/PI<<"\n";
 	
 	double L = sqrt(pow(center.x-p3.x, 2) + pow(center.y-p3.y, 2));
 
