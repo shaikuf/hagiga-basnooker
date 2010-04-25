@@ -269,25 +269,21 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 		printf("(%d,%d)\n", (int)corners[k].x, (int)corners[k].y);
 
 	//GET THE IMAGE AND OBJECT POINTS:
-	// We will choose chessboard object points as (r,c):
-	// (0,0), (board_w-1,0), (0,board_h-1), (board_w-1,board_h-1).
 	//
-	CvPoint2D32f objPts[4], imgPts[4];
-	objPts[0].x = 0; objPts[0].y = 0;
-	objPts[1].x = square_width*(board_w-1); objPts[1].y = 0;
-	objPts[2].x = 0; objPts[2].y = square_height*(board_h-1);
-	objPts[3].x = square_width*(board_w-1); objPts[3].y = square_height*(board_h-1);
-	imgPts[0] = corners[0];
-	imgPts[1] = corners[board_w-1];
-	imgPts[2] = corners[(board_h-1)*board_w];
-	imgPts[3] = corners[(board_h-1)*board_w + board_w-1];
-
-	// DRAW THE POINTS in order: B,G,R,YELLOW
-	//
-	cvCircle( image, cvPointFrom32f(imgPts[0]), 9, CV_RGB(0,0,255), 3);
-	cvCircle( image, cvPointFrom32f(imgPts[1]), 9, CV_RGB(0,255,0), 3);
-	cvCircle( image, cvPointFrom32f(imgPts[2]), 9, CV_RGB(255,0,0), 3);
-	cvCircle( image, cvPointFrom32f(imgPts[3]), 9, CV_RGB(255,255,0), 3);
+	int num_of_points = board_n;
+	CvMat *objPts = cvCreateMat(2, num_of_points, CV_32F);
+	CvMat *imgPts = cvCreateMat(2, num_of_points, CV_32F);
+	for(int i=0; i<board_n; i++) {
+		CV_MAT_ELEM(*objPts, float, 0, i) = (i%board_w)*square_width;
+		CV_MAT_ELEM(*objPts, float, 1, i) = (i/board_w)*square_height;
+		CV_MAT_ELEM(*imgPts, float, 0, i) = corners[i].x;
+		CV_MAT_ELEM(*imgPts, float, 1, i) = corners[i].y;
+		
+		cout<<"matched ("<<CV_MAT_ELEM(*imgPts, float, 0, i)<<","<<\
+			CV_MAT_ELEM(*imgPts, float, 1, i)<<") to ("<<\
+			CV_MAT_ELEM(*objPts, float, 0, i)<<","<<\
+			CV_MAT_ELEM(*objPts, float, 1, i)<<")\n";
+	}
 
 	// DRAW THE FOUND CHESSBOARD
 	//
@@ -305,7 +301,7 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 	// FIND THE HOMOGRAPHY
 	//
 	CvMat *H = cvCreateMat( 3, 3, CV_32F);
-	cvGetPerspectiveTransform( objPts, imgPts, H);
+	cvFindHomography(objPts, imgPts, H);
 
 	// LET THE USER ADJUST THE Z HEIGHT OF THE VIEW
 	//
@@ -333,9 +329,55 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 		);
 		cvShowImage( "Birds_Eye", birds_image );
 
+		float z_delta = 0.5;
+		int movement_delta = 25;
+		CvPoint2D32f tmp;
 		key = cvWaitKey();
-		if(key == 'u') Z += 0.5;
-		if(key == 'd') Z -= 0.5;
+		switch(key) {
+			case 'u':
+				Z += z_delta;
+				break;
+			case 'd':
+				Z -= z_delta;
+				break;
+			case 'i':
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 1, i) += movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'j':
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 0, i) += movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'k':
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 1, i) -= movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'l':
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 0, i) -= movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'r':
+				tmp.x = CV_MAT_ELEM(*objPts, float, 0, 0);
+				tmp.y = CV_MAT_ELEM(*objPts, float, 1, 0);
+				for(int i=0; i< num_of_points-1; i++) {
+					CV_MAT_ELEM(*objPts, float, 0, i) = CV_MAT_ELEM(*objPts, float, 0, i+1);
+					CV_MAT_ELEM(*objPts, float, 1, i) = CV_MAT_ELEM(*objPts, float, 1, i+1);
+				}
+				CV_MAT_ELEM(*objPts, float, 0, num_of_points-1) = tmp.x;
+				CV_MAT_ELEM(*objPts, float, 1, num_of_points-1) = tmp.y;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 't':
+				// flip horiz.
+				break;
+			case 'y':
+				// flip vert.
+				break;
+		}
 	}
 
 	_snprintf_s(filename, 100, "H-%d.xml", device_id);
@@ -385,11 +427,9 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	IplImage *img = (IplImage *)param;
 
-	// fix the x-y got from OpenCV (i don't know why! it's bad!)
-	x = (int)(x/1.25);
-	y = (int)(y/1.172);
+	fixCoordinates(x, y, cvSize(img->width, img->height));
 
-	int crop_size = 100;
+	int crop_size = 50;
 	
 	// crop template
 	CvRect crop_rect = cvRect(	MAX(cvRound(x - crop_size/2), 0),
@@ -484,6 +524,8 @@ void learn_borders(CvSize resolution, int device_id) {
 void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 	struct seq_data *data = (struct seq_data *)param;
 
+	fixCoordinates(x, y, *(data->resolution));
+
 	// static function variables
 	static CvPoint first_point = cvPoint(-1, -1);
 	static CvPoint last_point = cvPoint(-1, -1);
@@ -528,8 +570,9 @@ void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
 	} else {
 		if(event == CV_EVENT_LBUTTONUP && confirming == 1) {
 			// add point to sequence
-			float scale_x = (float)floor((CUE_PYRDOWN_WIDTH+0.0f)/data->resolution->height);
-			float scale_y = (float)floor((CUE_PYRDOWN_HEIGHT+0.0f)/data->resolution->width);
+			float scale_x = (float)(CUE_PYRDOWN_WIDTH+0.0f)/data->resolution->height;
+			float scale_y = (float)(CUE_PYRDOWN_HEIGHT+0.0f)/data->resolution->width;
+			cout<<scale_x<<" "<<scale_y<<endl;
 
 			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
 
@@ -603,6 +646,8 @@ void learn_edges(CvSize resolution, int device_id) {
 
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	struct seq_data *data = (struct seq_data *)param;
+
+	fixCoordinates(x, y, *(data->resolution));
 
 	static CvPoint new_point;
 	static IplImage *temp_img = createBlankCopy(data->img);
@@ -699,4 +744,11 @@ void watch(CvSize resolution, bool with_birds_eye, int device_id) {
 
 	capture.stop();
 	cvDestroyWindow("Live View");
+}
+
+void fixCoordinates(int &x, int &y, CvSize resolution) {
+	if(resolution.width = 1600) {
+		x = (int)(x/1.25);
+		y = (int)(y/1.55);
+	}
 }

@@ -19,24 +19,22 @@ int main(int argc, char* argv[])
 	CvSize resolution = cvSize(1600, 1200);
 	//CvSize resolution = cvSize(800, 600);
 
-	int mode = 0;
-	/* available modes:
-		0: normal
-		1: instance calibration
-		2: general calibration
-		3: template grabbing
-		4: learn borders
-		5: learn edges
-		-1: watch with corrections
-	*/
+	cout<<"available modes:\n";
+	cout<<"\t0: normal\n\t1: instance calibration\n\t2: general calibration\n";
+	cout<<"\t3: template grabbing\n\t4: learn borders\n\t5: learn edges\n";
+	cout<<"\t-1: watch with corrections\n";
+
+	int mode = -1;
+	do {
+		cin>>mode;
+	} while (mode<-1 || mode > 5);
 
 	if(mode == 2) {
 		// calibrate camera
-		calibration(4, 4, 12, 29.7f, 21.0f, resolution, 0);
-		//calibration(5, 3, 12, 29.7, 29.7, resolution, 0);
+		calibration(5, 3, 12, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
-		birds_eye(4, 4, 29.7f, 21.0f, resolution, 0);
+		birds_eye(5, 3, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 0) {
 		// main loop
 		gameLoop(resolution, 0);
@@ -51,7 +49,7 @@ int main(int argc, char* argv[])
 		learn_edges(resolution, 0);
 	} else if(mode == -1) {
 		// watch with corrections
-		watch(resolution, false, 0);
+		watch(resolution, true, 0);
 	}
 
 	return 0;
