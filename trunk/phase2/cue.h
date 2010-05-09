@@ -36,4 +36,7 @@ void meanCM(CvSeq *lines, CvPoint *dst_cm);
 /* Convert the line from center of mass and slope to theta */
 double line2theta(double cue_m, CvPoint cue_cm, CvPoint2D32f white_center);
 
+/* Find the angle of the cue using the white markers */
+void findCueWithWhiteMarkers(IplImage *src, double *theta);
+
 #endif
