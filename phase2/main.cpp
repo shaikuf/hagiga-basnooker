@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
 		calibration(5, 3, 12, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
-		birds_eye(5, 3, 5.8f, 5.8f, resolution, 0);
+		birds_eye(12, 8, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 0) {
 		// main loop
 		gameLoop(resolution, 0);
@@ -66,12 +66,12 @@ void gameLoop(CvSize resolution, int device_id) {
 
 	// load ball templates
 	IplImage *templates[8];
-	char *filenames[] = {"white-templ.jpg", "red-templ.jpg", "blue-templ.jpg",
+	char *filenames[] = {"white-templ.jpg", "red-templ.jpg", "black-templ.jpg",
 		"yellow-templ.jpg", "green-templ.jpg", "pink-templ.jpg", "brown-templ.jpg",
-		"black-templ.jpg"};
-	CvScalar colors[8] = {cvScalar(0,0,0), cvScalar(255, 255, 0), cvScalar(0, 255, 255),
+		"blue-templ.jpg"};
+	CvScalar colors[8] = {cvScalar(0,0,0), cvScalar(255, 255, 0), cvScalar(255, 255, 255),
 		cvScalar(255, 0, 0), cvScalar(255, 0, 255), cvScalar(52, 63, 0), cvScalar(255, 180, 105),
-		cvScalar(255, 255, 255)};
+		cvScalar(0, 255, 255)};
 	CvPoint2D32f ball_center[8];
 	float ball_radius[8];
 
@@ -114,31 +114,42 @@ void gameLoop(CvSize resolution, int device_id) {
 			cvCopy(pre_image, image);
 		}
 
-		// find balls
-		if(find_balls) {
-			for(i=0; i<NUM_BALLS; i++)
-				findBall(image, templates[i], &ball_center[i], &ball_radius[i]);
+		if(FIND_BALLS) {
+			// find balls
+			if(find_balls) {
+				for(i=0; i<NUM_BALLS; i++) {
+					findBall(image, templates[i], &ball_center[i], &ball_radius[i], i==2);
+					cout<<filenames[i]<<" ("<<ball_center[i].x<<", "<<ball_center[i].y<<")\n";
+				}
 
-			find_balls = false;
+				find_balls = false;
 
-			// send white ball to client
-			CvPoint2D32f normed_pos = fixPosition(ball_center[0]);
-			tcp_server.send_white_pos(normed_pos.x, normed_pos.y);
-			cout<<"Sending: ("<<normed_pos.x<<", "<<normed_pos.y<<")\n";
-		}
+				// send white ball to client
+				/*CvPoint2D32f normed_pos = fixPosition(ball_center[0]);
+				tcp_server.send_white_pos(normed_pos.x, normed_pos.y);
+				cout<<"Sending: ("<<normed_pos.x<<", "<<normed_pos.y<<")\n";*/
+			}
 
-		// mark balls
-		for(i=0; i<NUM_BALLS; i++) {
-			markBall(image, ball_center[i], ball_radius[i], colors[i], false);
+			// mark balls
+			for(i=0; i<NUM_BALLS; i++) {
+				markBall(image, ball_center[i], ball_radius[i], colors[i], false);
+			}
 		}
 
 		// mark cue
-		findAndMarkCue(image, ball_center[0], ball_radius[0], &cue_m, &cue_cm);
-		
-		if(cue_cm.x != 0 || cue_cm.y != 0) { // we found the cue
-			double theta = line2theta(cue_m, cue_cm, ball_center[0]);
+		if(FIND_CUE_OLD) {
+			findAndMarkCue(image, ball_center[0], ball_radius[0], &cue_m, &cue_cm);
 			
-			// send angle to client
+			if(cue_cm.x != 0 || cue_cm.y != 0) { // we found the cue
+				double theta = line2theta(cue_m, cue_cm, ball_center[0]);
+				
+				// send angle to client
+				tcp_server.send_theta(theta);
+			}
+		} else if(FIND_CUE_NEW) {
+			double theta;
+			findCueWithWhiteMarkers(image, &theta);
+
 			tcp_server.send_theta(theta);
 		}
 

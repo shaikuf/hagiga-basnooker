@@ -330,6 +330,7 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 		cvShowImage( "Birds_Eye", birds_image );
 
 		float z_delta = 0.5;
+		float theta_delta = 0.02*PI/180;
 		int movement_delta = 25;
 		CvPoint2D32f tmp;
 		key = cvWaitKey();
@@ -376,6 +377,30 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 				break;
 			case 'y':
 				// flip vert.
+				break;
+			case 'o':
+				// rotate clockwise
+				for(int i=0; i<num_of_points; i++) {
+					tmp.x = CV_MAT_ELEM(*objPts, float, 0, i);
+					tmp.y = CV_MAT_ELEM(*objPts, float, 1, i);
+					CV_MAT_ELEM(*objPts, float, 0, i) = tmp.x*cos(theta_delta)\
+						- tmp.y*sin(theta_delta);
+					CV_MAT_ELEM(*objPts, float, 1, i) = tmp.x*sin(theta_delta)\
+						+ tmp.y*cos(theta_delta);
+				}
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'p':
+				// rotate counter-clockwise
+				for(int i=0; i<num_of_points; i++) {
+					tmp.x = CV_MAT_ELEM(*objPts, float, 0, i);
+					tmp.y = CV_MAT_ELEM(*objPts, float, 1, i);
+					CV_MAT_ELEM(*objPts, float, 0, i) = tmp.x*cos(-1*theta_delta)\
+						- tmp.y*sin(-1*theta_delta);
+					CV_MAT_ELEM(*objPts, float, 1, i) = tmp.x*sin(-1*theta_delta)\
+						+ tmp.y*cos(-1*theta_delta);
+				}
+				cvFindHomography(objPts, imgPts, H);
 				break;
 		}
 	}

@@ -8,11 +8,21 @@ using namespace std;
 
 /* This finds the ball matching the given template on the image */
 void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
-			  float *radius) {
-	
+			  float *radius, bool invert) {
+
 	// find the template
 	CvPoint p;
-	findTemplate(img, templ, &p);
+
+	if(invert) { /* TODO -- debug */
+		IplImage *tmp = createBlankCopy(img);
+		cvCvtColor(img, tmp, CV_BGR2YCrCb);
+		cvNot(tmp, tmp);
+		cvCvtColor(tmp, tmp, CV_YCrCb2BGR);
+		findTemplate(tmp, templ, &p);
+		cvReleaseImage(&tmp);
+	} else {
+		findTemplate(img, templ, &p);
+	}
 
 	// we have no sub-pixel accuracy yet
 	center->x = (float)p.x;

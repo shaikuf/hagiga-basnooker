@@ -5,7 +5,7 @@
 
 /* This finds the ball matching the given template on the image */
 void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
-			  float *radius);
+			  float *radius, bool invert = false);
 
 /* This marks the ball on the image */
 void markBall(IplImage *img, CvPoint2D32f center, float radius,

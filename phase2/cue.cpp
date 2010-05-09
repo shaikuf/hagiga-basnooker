@@ -265,3 +265,109 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint2D32f white_center) {
 
 	return theta;
 }
+
+void findCueWithWhiteMarkers(IplImage *src, double *theta) {
+	const int THRESH_VAL = 200;
+	const int OPENING_VAL = 2;
+	const int CLOSING_VAL = 4;
+
+	static bool once = true;
+
+	if(once && CUE_FIND_DEBUG) {
+		cvNamedWindow("gray");
+		cvNamedWindow("threshold");
+		cvNamedWindow("morphed");
+		once = false;
+	}
+
+	// create grayscale image
+	IplImage* gray = createBlankCopy(src, 1);
+	cvCvtColor(src, gray, CV_BGR2GRAY);
+
+	if(CUE_FIND_DEBUG) {
+		cvShowImage("gray", gray);
+	}
+
+	// threshold to leave only white markers
+	IplImage* thresh = createBlankCopy(gray);
+	cvThreshold(gray, thresh, THRESH_VAL, 255, CV_THRESH_BINARY);
+
+	if(CUE_FIND_DEBUG) {
+		cvShowImage("threshold", thresh);
+	}
+
+	// morphological operations:
+	IplImage *morph = cvCloneImage(thresh);
+
+		// remove small objects
+	cvErode(morph, morph, 0, OPENING_VAL);
+	cvDilate(morph, morph, 0, OPENING_VAL);
+
+		// merge large objects
+	cvDilate(morph, morph, 0, CLOSING_VAL);
+	cvErode(morph, morph, 0, CLOSING_VAL);
+
+	if(CUE_FIND_DEBUG) {
+	cvShowImage("morphed", morph);
+	}
+
+	// find the contours
+	IplImage* temp = cvCloneImage(morph);
+
+	CvMemStorage *mem_storage = cvCreateMemStorage(0);
+	CvSeq* contours = NULL;
+
+		// actually find the contours
+	CvContourScanner scanner = cvStartFindContours(temp, mem_storage, \
+		sizeof(CvContour), CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+
+	CvSeq* c;
+	int numCont = 0;
+	while( (c = cvFindNextContour( scanner )) != NULL ) {
+		double len = cvContourPerimeter( c );
+
+		if( len > 100 ) { // get rid of big blobs
+			cvSubstituteContour( scanner, NULL );
+		} else { // polynomial approximation
+			CvSeq* c_new;
+
+			c_new = cvApproxPoly(c, sizeof(CvContour), mem_storage,
+				CV_POLY_APPROX_DP, 1, 0);
+
+			cvSubstituteContour( scanner, c_new );
+			numCont++;
+		}
+	}
+	contours = cvEndFindContours( &scanner );
+
+		// find the contour centers
+	int i;
+	CvPoint *centers = new CvPoint[numCont];
+	CvMoments moments;
+	double M00, M01, M10;
+
+	for(i=0, c=contours; c != NULL; c = c->h_next, i++) {
+		cvContourMoments(c, &moments);
+
+		M00 = cvGetSpatialMoment(&moments,0,0);
+		M10 = cvGetSpatialMoment(&moments,1,0);
+		M01 = cvGetSpatialMoment(&moments,0,1);
+		centers[i].x = (int)(M10/M00);
+		centers[i].y = (int)(M01/M00);
+	}
+
+	// paint debug image
+	if(CUE_FIND_DEBUG) {
+		for(i=0; i < numCont; i++) {
+			cvCircle(src, centers[i], 1, cvScalar(0, 0, 255), 3);
+		}
+	}
+
+	// release stuff
+	cvReleaseMemStorage(&mem_storage);
+
+	cvReleaseImage(&gray);
+	cvReleaseImage(&thresh);
+	cvReleaseImage(&morph);
+	cvReleaseImage(&temp);
+}
