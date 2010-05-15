@@ -48,12 +48,7 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 	return theta;
 }
 
-void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
-							 CvPoint white_center) {
-	const int THRESH_VAL = 220;
-	const int OPENING_VAL = 2;
-	const int CLOSING_VAL = 4;
-
+bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta) {
 	static bool once = true;
 
 	if(once && CUE_FIND_DEBUG) {
@@ -78,7 +73,7 @@ void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
 
 	// threshold to leave only white markers
 	IplImage* thresh = createBlankCopy(gray);
-	cvThreshold(gray, thresh, THRESH_VAL, 255, CV_THRESH_BINARY);
+	cvThreshold(gray, thresh, CUE_THRESH_VAL, 255, CV_THRESH_BINARY);
 
 	if(CUE_FIND_DEBUG) {
 		cvShowImage("threshold", thresh);
@@ -88,12 +83,12 @@ void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
 	IplImage *morph = cvCloneImage(thresh);
 
 		// remove small objects
-	cvErode(morph, morph, 0, OPENING_VAL);
-	cvDilate(morph, morph, 0, OPENING_VAL);
+	cvErode(morph, morph, 0, CUE_OPENING_VAL);
+	cvDilate(morph, morph, 0, CUE_OPENING_VAL);
 
 		// merge large objects
-	cvDilate(morph, morph, 0, CLOSING_VAL);
-	cvErode(morph, morph, 0, CLOSING_VAL);
+	cvDilate(morph, morph, 0, CUE_CLOSING_VAL);
+	cvErode(morph, morph, 0, CUE_CLOSING_VAL);
 
 	if(CUE_FIND_DEBUG) {
 		cvShowImage("morphed", morph);
@@ -114,7 +109,7 @@ void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
 	while( (c = cvFindNextContour( scanner )) != NULL ) {
 		double len = cvContourPerimeter( c );
 
-		if( len > 100 ) { // get rid of big blobs
+		if( len > CUE_BLOB_MAX_SIZE ) { // get rid of big blobs
 			cvSubstituteContour( scanner, NULL );
 		} else { // polynomial approximation
 			CvSeq* c_new;
@@ -144,27 +139,24 @@ void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
 	}
 
 		// filter those outside the borders by far
-	centers = filterPointsOnTable(centers, 50);
+	centers = filterPointsOnTable(centers, CUE_BLOB_MAX_DIST_FROM_TABLE);
 
 	// find the linear regression
-	double min_coeff = 0.99;
 	double cue_n;
-	vector<CvPoint> real_centers = findPointsOnLine(centers, min_coeff, cue_m,
-		&cue_n, cue_cm);
+	double cue_m;
+	CvPoint cue_cm;
 
+	vector<CvPoint> real_centers = findPointsOnLine(centers, CUE_MIN_COEFF, &cue_m,
+		&cue_n, &cue_cm);
+
+	// perhaps filter the line
 	bool found_cue = true;
-
-	if(cue_cm->x == -1) {
-		// see if we found a line
+	if(cue_cm.x == -1) { // did we even find one?
 		found_cue = false;
-	} else {
-		// see if the line is around the white ball
-		double max_dist_from_white = 15.0;
+	} else { // check if the line is around the white ball
 		double d;
-		if((d = distFromLine(white_center.x, white_center.y, cue_n, *cue_m)) > max_dist_from_white) {
+		if((d = distFromLine(white_center.x, white_center.y, cue_n, cue_m)) > CUE_MAX_DIST_FROM_WHITE) {
 			// ignore this cue
-			cue_cm->x = -1;
-			cue_cm->y = -1;
 			found_cue = false;
 		}
 		if(CUE_FIND_DEBUG) {
@@ -174,7 +166,7 @@ void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
 
 	// paint debug image
 	if(CUE_FIND_DEBUG) {
-		for(i=0; i < real_centers.size(); i++) {
+		for(i=0; i < (int)real_centers.size(); i++) {
 			if(found_cue) {
 				cvCircle(src, cvPoint(real_centers[i].x, real_centers[i].y), 1,
 					cvScalar(0, 255, 0), 3);
@@ -185,6 +177,11 @@ void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
 		}
 	}
 
+	// calculate the angle
+	if(found_cue) {
+		*theta = line2theta(cue_m, cue_cm, white_center);
+	}
+
 	// release stuff
 	cvReleaseMemStorage(&mem_storage);
 
@@ -192,5 +189,7 @@ void findCueWithWhiteMarkers(IplImage *src, double *cue_m, CvPoint *cue_cm,
 	cvReleaseImage(&thresh);
 	cvReleaseImage(&morph);
 	cvReleaseImage(&temp);
+
+	return found_cue;
 }
 

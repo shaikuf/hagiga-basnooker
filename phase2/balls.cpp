@@ -14,41 +14,18 @@ vector<CvPoint> findBall(IplImage *img, IplImage *templ, int max_count,
 	// find the template
 	vector<CvPoint> p;
 
-	double corr_thd = 0.7;
 	if(invert) { /* TODO -- debug */
 		IplImage *tmp = createBlankCopy(img);
 		cvCvtColor(img, tmp, CV_BGR2YCrCb);
 		cvNot(tmp, tmp);
 		cvCvtColor(tmp, tmp, CV_YCrCb2BGR);
-		p = findTemplate(tmp, templ, corr_thd, max_count);
+		p = findTemplate(tmp, templ, BALL_CORR_THD, max_count);
 		cvReleaseImage(&tmp);
 	} else {
-		p = findTemplate(img, templ, corr_thd, max_count);
+		p = findTemplate(img, templ, BALL_CORR_THD, max_count);
 	}
 
 	return p;
-}
-
-/* This uses findBall() and marks the results on the image */
-void markBall(IplImage *img, CvPoint center, CvScalar color) {
-
-	// print an overlay image of the found circle
-	IplImage *overlay_drawing = createBlankCopy(img, 1);
-	cvSet(overlay_drawing, cvScalar(0));
-
-	// draw the cross on the overlay
-    int line_len = 5;
-	cvLine(overlay_drawing, cvPoint(cvRound(center.x)-line_len,
-		cvRound(center.y)), cvPoint(cvRound(center.x)+line_len,
-		cvRound(center.y)), cvScalar(0xff), 1);
-	cvLine(overlay_drawing, cvPoint(cvRound(center.x),
-		cvRound(center.y)-line_len), cvPoint(cvRound(center.x),
-		cvRound(center.y)+line_len), cvScalar(0xff), 1);
-
-	// draw the overlay on the image
-	cvSet(img, color, overlay_drawing);
-
-	cvReleaseImage(&overlay_drawing);
 }
 
 /* Fix an absolute position on the image, to a position relative to the table */

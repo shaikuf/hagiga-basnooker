@@ -84,9 +84,6 @@ void gameLoop(CvSize resolution, int device_id) {
 	}
 
 	// initialization
-	double cue_m;
-	CvPoint cue_cm;
-
 	bool find_balls = true;
 
 	TCPServer tcp_server;
@@ -130,18 +127,18 @@ void gameLoop(CvSize resolution, int device_id) {
 
 			// mark balls
 			for(i=0; i<NUM_BALLS; i++) {
-				for(int j=0; j < ball_center[i].size(); j++)
-					markBall(image, ball_center[i][j], colors[i]);
+				for(unsigned int j=0; j < ball_center[i].size(); j++)
+					markCross(image, ball_center[i][j], colors[i]);
 			}
 		}
 
 		if(FIND_CUE) {
 			// find the cue
-			findCueWithWhiteMarkers(image, &cue_m, &cue_cm, ball_center[0].front());
+			//findCueWithWhiteMarkers(image, &cue_m, &cue_cm, ball_center[0].front());
+			double theta;
+			bool res = findCueWithWhiteMarkers(image, ball_center[0].front(), &theta);
 
-			if(cue_cm.x != -1) { // we found the cue
-				double theta = line2theta(cue_m, cue_cm, ball_center[0].front());
-				
+			if(res) { // we found the cue
 				// send angle to client
 				tcp_server.send_theta(theta);
 			}
