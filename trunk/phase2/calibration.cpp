@@ -330,7 +330,7 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 		cvShowImage( "Birds_Eye", birds_image );
 
 		float z_delta = 0.5;
-		float theta_delta = 0.02*PI/180;
+		float theta_delta = (float)(0.02*PI/180);
 		int movement_delta = 25;
 		CvPoint2D32f tmp;
 		key = cvWaitKey();
@@ -536,6 +536,8 @@ void learn_edges(CvSize resolution, int device_id) {
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	struct seq_data *data = (struct seq_data *)param;
 
+	fixCoordinates(x, y, *(data->resolution));
+
 	static CvPoint new_point;
 	static IplImage *temp_img = createBlankCopy(data->img);
 	static int confirming = 0;
@@ -548,8 +550,7 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 
 			// draw new image
 			cvCopy(data->img, temp_img);
-			fixCoordinates(x, y, *(data->resolution));
-			cvCircle(temp_img, cvPoint(x,y), 1, cvScalar(255, 0, 0), 2);
+			cvCircle(temp_img, new_point, 1, cvScalar(255, 0, 0), 2);
 
 			cvShowImage("Edges Marker", temp_img);
 

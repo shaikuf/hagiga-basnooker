@@ -13,10 +13,6 @@ void birds_eye(int board_w, int board_h, float board_width, float board_height,
 void grab_templates(CvSize resolution, int device_id);
 void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param);
 
-/* this lets the user mark the cue-finding borders of the table */
-void learn_borders(CvSize resolution, int device_id);
-void borderPointAroundMouse(int event, int x, int y, int flags, void *param);
-
 /* this lets the user mark the edges of the projection area */
 void learn_edges(CvSize resolution, int device_id);
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param);

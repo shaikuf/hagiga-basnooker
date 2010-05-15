@@ -82,7 +82,7 @@ CvSeq *tableBorders() {
 		mem = cvCreateMemStorage();
 
 		char filename[100];
-		_snprintf_s(filename, 100, "borders-%d.xml", 0);
+		_snprintf_s(filename, 100, "edges-%d.xml", 0);
 		borders = (CvSeq*)cvLoad(filename, mem);
 	}
 
@@ -137,4 +137,26 @@ bool isPointOnTable(CvPoint2D32f p, double max_dist) {
 
 bool isPointOnTable(CvPoint p, double max_dist) {
 	return isPointOnTable(cvPoint2D32f(p.x, p.y), max_dist);
+}
+
+/* This marks a cross on the image */
+void markCross(IplImage *img, CvPoint center, CvScalar color) {
+
+	// print an overlay image of the found circle
+	IplImage *overlay_drawing = createBlankCopy(img, 1);
+	cvSet(overlay_drawing, cvScalar(0));
+
+	// draw the cross on the overlay
+    int line_len = 5;
+	cvLine(overlay_drawing, cvPoint(cvRound(center.x)-line_len,
+		cvRound(center.y)), cvPoint(cvRound(center.x)+line_len,
+		cvRound(center.y)), cvScalar(0xff), 1);
+	cvLine(overlay_drawing, cvPoint(cvRound(center.x),
+		cvRound(center.y)-line_len), cvPoint(cvRound(center.x),
+		cvRound(center.y)+line_len), cvScalar(0xff), 1);
+
+	// draw the overlay on the image
+	cvSet(img, color, overlay_drawing);
+
+	cvReleaseImage(&overlay_drawing);
 }

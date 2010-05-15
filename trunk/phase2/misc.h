@@ -37,6 +37,9 @@ vector<CvPoint2D32f> filterPointsOnTable(const vector<CvPoint2D32f> &centers,
 bool isPointOnTable(CvPoint2D32f p, double max_dist);
 bool isPointOnTable(CvPoint p, double max_dist);
 
+/* This marks a cross on the image */
+void markCross(IplImage *img, CvPoint center, CvScalar color);
+
 template<typename T>
 inline bool isinf(T value) {
 	return std::numeric_limits<T>::has_infinity &&
