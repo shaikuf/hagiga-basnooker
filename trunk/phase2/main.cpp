@@ -17,11 +17,10 @@ using namespace std;
 int main(int argc, char* argv[])
 {
 	CvSize resolution = cvSize(1600, 1200);
-	//CvSize resolution = cvSize(800, 600);
 
 	cout<<"available modes:\n";
 	cout<<"\t0: normal\n\t1: instance calibration\n\t2: general calibration\n";
-	cout<<"\t3: template grabbing\n\t4: learn borders\n\t5: learn edges\n";
+	cout<<"\t3: template grabbing\n\t4: learn edges\n";
 	cout<<"\t-1: watch with corrections\n";
 
 	int mode = -1;
@@ -42,9 +41,6 @@ int main(int argc, char* argv[])
 		// grab templates
 		grab_templates(resolution, 0);
 	} else if(mode == 4) {
-		// learn borders
-		learn_borders(resolution, 0);
-	} else if(mode == 5) {
 		// learn edges
 		learn_edges(resolution, 0);
 	} else if(mode == -1) {
@@ -72,14 +68,11 @@ void gameLoop(CvSize resolution, int device_id) {
 	CvScalar colors[8] = {cvScalar(0,0,0), cvScalar(255, 255, 0), cvScalar(255, 255, 255),
 		cvScalar(255, 0, 0), cvScalar(255, 0, 255), cvScalar(52, 63, 0), cvScalar(255, 180, 105),
 		cvScalar(0, 255, 255)};
-	CvPoint2D32f ball_center[8];
-	float ball_radius[8];
+	vector<CvPoint> ball_center[8];
 
 	int i;
 	for(i=0; i<NUM_BALLS; i++) {
 		templates[i] = cvLoadImage(filenames[i]);
-		ball_center[i] = cvPoint2D32f(0, 0);
-		ball_radius[i] = 1;
 	}
 
 	// load projective transformation matrix
@@ -118,8 +111,13 @@ void gameLoop(CvSize resolution, int device_id) {
 			// find balls
 			if(find_balls) {
 				for(i=0; i<NUM_BALLS; i++) {
-					findBall(image, templates[i], &ball_center[i], &ball_radius[i], i==2);
-					cout<<filenames[i]<<" ("<<ball_center[i].x<<", "<<ball_center[i].y<<")\n";
+					vector<CvPoint> res = findBall(image, templates[i], (i==1)?15:1, i==2);
+					ball_center[i] = res;
+					if(ball_center[i].size() > 0) {
+						cout<<filenames[i]<<" ("<<ball_center[i].front().x<<", "<<ball_center[i].front().y<<")\n";
+					} else {
+						cout<<filenames[i]<<" not found"<<endl;
+					}
 				}
 
 				find_balls = false;
@@ -132,25 +130,21 @@ void gameLoop(CvSize resolution, int device_id) {
 
 			// mark balls
 			for(i=0; i<NUM_BALLS; i++) {
-				markBall(image, ball_center[i], ball_radius[i], colors[i], false);
+				for(int j=0; j < ball_center[i].size(); j++)
+					markBall(image, ball_center[i][j], colors[i]);
 			}
 		}
 
-		// mark cue
-		if(FIND_CUE_OLD) {
-			findAndMarkCue(image, ball_center[0], ball_radius[0], &cue_m, &cue_cm);
-			
-			if(cue_cm.x != 0 || cue_cm.y != 0) { // we found the cue
-				double theta = line2theta(cue_m, cue_cm, ball_center[0]);
+		if(FIND_CUE) {
+			// find the cue
+			findCueWithWhiteMarkers(image, &cue_m, &cue_cm, ball_center[0].front());
+
+			if(cue_cm.x != -1) { // we found the cue
+				double theta = line2theta(cue_m, cue_cm, ball_center[0].front());
 				
 				// send angle to client
 				tcp_server.send_theta(theta);
 			}
-		} else if(FIND_CUE_NEW) {
-			double theta;
-			findCueWithWhiteMarkers(image, &theta);
-
-			tcp_server.send_theta(theta);
 		}
 
 		cvShowImage("Game", image);

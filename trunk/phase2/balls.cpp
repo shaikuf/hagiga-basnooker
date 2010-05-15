@@ -3,56 +3,47 @@
 #include <iostream>
 #include "balls.h"
 #include "misc.h"
+#include <vector>
 
 using namespace std;
 
 /* This finds the ball matching the given template on the image */
-void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
-			  float *radius, bool invert) {
+vector<CvPoint> findBall(IplImage *img, IplImage *templ, int max_count,
+						 bool invert) {
 
 	// find the template
-	CvPoint p;
+	vector<CvPoint> p;
 
+	double corr_thd = 0.7;
 	if(invert) { /* TODO -- debug */
 		IplImage *tmp = createBlankCopy(img);
 		cvCvtColor(img, tmp, CV_BGR2YCrCb);
 		cvNot(tmp, tmp);
 		cvCvtColor(tmp, tmp, CV_YCrCb2BGR);
-		findTemplate(tmp, templ, &p);
+		p = findTemplate(tmp, templ, corr_thd, max_count);
 		cvReleaseImage(&tmp);
 	} else {
-		findTemplate(img, templ, &p);
+		p = findTemplate(img, templ, corr_thd, max_count);
 	}
 
-	// we have no sub-pixel accuracy yet
-	center->x = (float)p.x;
-	center->y = (float)p.y;
+	return p;
 }
 
 /* This uses findBall() and marks the results on the image */
-void markBall(IplImage *img, CvPoint2D32f center, float radius,
-			  CvScalar color, bool draw_circle) {
-
-	CvPoint center_i = cvPointFrom32f(center);
+void markBall(IplImage *img, CvPoint center, CvScalar color) {
 
 	// print an overlay image of the found circle
 	IplImage *overlay_drawing = createBlankCopy(img, 1);
 	cvSet(overlay_drawing, cvScalar(0));
 
-	// draw the circle on the overlay
-	if(draw_circle) {
-		cvCircle(overlay_drawing, cvPoint(cvRound(center_i.x),
-				cvRound(center_i.y)),	cvRound(radius), cvScalar(0xff), 1);
-	}
-
 	// draw the cross on the overlay
     int line_len = 5;
-	cvLine(overlay_drawing, cvPoint(cvRound(center_i.x)-line_len,
-		cvRound(center_i.y)), cvPoint(cvRound(center_i.x)+line_len,
-		cvRound(center_i.y)), cvScalar(0xff), 1);
-	cvLine(overlay_drawing, cvPoint(cvRound(center_i.x),
-		cvRound(center_i.y)-line_len), cvPoint(cvRound(center_i.x),
-		cvRound(center_i.y)+line_len), cvScalar(0xff), 1);
+	cvLine(overlay_drawing, cvPoint(cvRound(center.x)-line_len,
+		cvRound(center.y)), cvPoint(cvRound(center.x)+line_len,
+		cvRound(center.y)), cvScalar(0xff), 1);
+	cvLine(overlay_drawing, cvPoint(cvRound(center.x),
+		cvRound(center.y)-line_len), cvPoint(cvRound(center.x),
+		cvRound(center.y)+line_len), cvScalar(0xff), 1);
 
 	// draw the overlay on the image
 	cvSet(img, color, overlay_drawing);

@@ -1,86 +1,97 @@
 #include "linear.h"
 #include <cv.h>
-#define coef_inc  0.05
+#include <iostream>
+#include <vector>
+
 using namespace std;
 
-Linear::Linear(vector<CvPoint2D32f> points){
-	int size=points.size();
-	double* x_arr = new double[size];
-	double* y_arr = new double[size];
-	flags = new int[size];
-	for(int i=0; i<size; i++){
-		CvPoint2D32f current= points[i];
-		x_arr[i] = current.x;
-		y_arr[i] = current.y;
-	}
-	do_fit(size-1,x_arr,y_arr);
-	double first_m = m_a;
-	double first_coef = m_coeff;
+vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
+								 double min_coeff, double *line_m,
+								 double *line_n, CvPoint *line_cm) {
+	vector<CvPoint2D32f> d_points(points);
 
-	//testing the increment in the coefficient without everyone of the points
-	for(int i=0; i<size; i++){
-		double* x_arr = new double[size];
-		double* y_arr = new double[size];
-		//create a copy of the array without the i'th point
-		for(int k=0; k<size-1; k++){
-			CvPoint2D32f current;
-			if(k<i)
-				current = points[i];
-			else
-				current = points[i+1];
-			x_arr[k] = current.x;
-			y_arr[k] = current.y;
+	double m_a, m_b, m_coeff = 0;
+
+	while(m_coeff < min_coeff && d_points.size() >= 2) {
+		linearRegression(d_points, m_a, m_b, m_coeff);
+
+		// delete the furthest point
+		vector<CvPoint2D32f>::iterator max_iter = d_points.begin();
+		double max_dist = distFromLine(max_iter->x, max_iter->y, m_a, m_b);
+
+		
+		vector<CvPoint2D32f>::iterator iter = max_iter+1;
+		while(iter != d_points.end()) {
+			double new_dist;
+			if((new_dist = distFromLine(iter->x, iter->y, m_a, m_b)) > max_dist) {
+				max_dist = new_dist;
+				max_iter = iter;
+			}
+			iter++;
 		}
-		do_fit(size-1,x_arr,y_arr);
-		if( (m_coeff) > (first_coef+coef_inc) )
-			flags[i]=1;
-		else
-			flags[i]=0;
+
+		d_points.erase(max_iter);
 	}
-	int count = 0;
-	for(int i=0; i<size; i++){
-		if(flags[i]==1){
-			CvPoint2D32f current = points[i];
-			x_arr[count]=current.x;
-			y_arr[count]=current.y;
-			count++;
-		}
+
+	if(d_points.size() < 2) {
+		line_cm->x = -1;
+		line_cm->y = -1;
+		vector<CvPoint> empty;
+		return empty;
 	}
-	do_fit(count,x_arr,y_arr);
-	delete[] x_arr;
-	delete[] y_arr;
+
+	double cm_x = 0, cm_y = 0;
+
+	vector<CvPoint> res_points;
+	for(int i=0; i<d_points.size(); i++) {
+		cm_x += d_points[i].x;
+		cm_y += d_points[i].y;
+
+		res_points.push_back(cvPoint((int)d_points[i].x, (int)d_points[i].y));
+	}
+
+	line_cm->x = (int)(cm_x/d_points.size());
+	line_cm->y = (int)(cm_y/d_points.size());
+
+	*line_m = m_b;
+	*line_n = m_a;
+
+	return res_points;
 }
 
-void Linear::do_fit(int n, double*x, double*y){
-
-            // calculate the averages of arrays x and y
-            double xa = 0, ya = 0;
-            for (int i = 0; i < n; i++) {
-                xa += x[i];
-                ya += y[i];
-            }
-            xa /= n;
-            ya /= n;
-
-            // calculate auxiliary sums
-            double xx = 0, yy = 0, xy = 0;
-            for (int i = 0; i < n; i++) {
-                double tmpx = x[i] - xa, tmpy = y[i] - ya;
-                xx += tmpx * tmpx;
-                yy += tmpy * tmpy;
-                xy += tmpx * tmpy;
-            }
-
-            // calculate regression line parameters
-
-            // make sure slope is not infinite
-            assert(fabs(xx) != 0);
-
-                m_b = xy / xx;
-                m_a = ya - m_b * xa;
-            m_coeff = (fabs(yy) == 0) ? 1 : xy / sqrt(xx * yy);
+double distFromLine(double x, double y, double m_a, double m_b) {
+	return fabs(-m_b*x + y -m_a)/sqrt(m_b*m_b + 1);
 }
 
-Linear::~Linear(){
-	delete[] flags;
+void linearRegression(vector<CvPoint2D32f> points, double &m_a, double &m_b, double &m_coeff) {
+	int n = points.size();
+
+	// calculate means
+	double mean_x = 0, mean_y = 0;
+	for(int i=0; i<n; i++) {
+		mean_x += points[i].x;
+		mean_y += points[i].y;
+	}
+	mean_x /= n;
+	mean_y /= n;
+
+	// calculate std and sample correlation coefficient
+	double std_x = 0, std_y = 0;
+	double r_xy = 0;
+	for(int i=0; i<n; i++) {
+		double diff_x = points[i].x-mean_x, diff_y = points[i].y-mean_y;
+		std_x += diff_x*diff_x;
+		std_y += diff_y*diff_y;
+		r_xy += diff_x*diff_y;
+	}
+	std_x = sqrt(std_x/n);
+	std_y = sqrt(std_y/n);
+	r_xy /= std_x*std_y*(n-1);
+
+	// calculate fit coefficients
+	m_b = r_xy*std_y/std_x;
+	m_a = mean_y - m_b*mean_x;
+	
+	// calculate r^2
+	m_coeff = r_xy*r_xy;
 }
