@@ -361,17 +361,6 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 					CV_MAT_ELEM(*objPts, float, 0, i) -= movement_delta;
 				cvFindHomography(objPts, imgPts, H);
 				break;
-			case 'r':
-				tmp.x = CV_MAT_ELEM(*objPts, float, 0, 0);
-				tmp.y = CV_MAT_ELEM(*objPts, float, 1, 0);
-				for(int i=0; i< num_of_points-1; i++) {
-					CV_MAT_ELEM(*objPts, float, 0, i) = CV_MAT_ELEM(*objPts, float, 0, i+1);
-					CV_MAT_ELEM(*objPts, float, 1, i) = CV_MAT_ELEM(*objPts, float, 1, i+1);
-				}
-				CV_MAT_ELEM(*objPts, float, 0, num_of_points-1) = tmp.x;
-				CV_MAT_ELEM(*objPts, float, 1, num_of_points-1) = tmp.y;
-				cvFindHomography(objPts, imgPts, H);
-				break;
 			case 't':
 				// flip horiz.
 				break;
@@ -494,137 +483,12 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 	cvResetImageROI(img);
 }
 
-/* this lets the user mark the cue-finding borders of the table */
-void learn_borders(CvSize resolution, int device_id) {
-	// init camera
-	VideoCapture capture(0, resolution.width, resolution.height);
-	IplImage *pre_image = capture.CreateCaptureImage();
-	IplImage *image = capture.CreateCaptureImage();
-	IplImage *scaled_image = cvCreateImage(cvSize(800, 600),
-		image->depth, image->nChannels);
-
-	cvNamedWindow("Borders Marker", CV_WINDOW_AUTOSIZE);
-
-	// load data from files
-	char filename[100];
-	_snprintf_s(filename, 100, "H-%d.xml", device_id);
-	CvMat* H = (CvMat*)cvLoad(filename);
-
-	capture.waitFrame(pre_image); // capture frame
-	cvWarpPerspective(pre_image, image,	H,
-		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
-
-	cvShowImage("Borders Marker", image);
-
-	// initialize data
-	CvMemStorage *mem = cvCreateMemStorage();
-	CvSeqWriter writer;
-	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
-
-	struct seq_data data;
-	data.img = image;
-	data.resolution = &resolution;
-	data.writer = &writer;
-
-	// wait for user to mark
-	cvShowImage("Borders Marker", image);
-	cvSetMouseCallback("Borders Marker", &borderPointAroundMouse, &data);
-	char c=cvWaitKey(0);
-
-	// save borders
-	CvSeq* borders = cvEndWriteSeq(&writer);
-
-	_snprintf_s(filename, 100, "borders-%d.xml", device_id);
-	cvSave(filename, borders);
-
-	// release stuff
-	capture.stop();
-	cvDestroyWindow("Borders Marker");
-
-	cvReleaseMat(&H);
-	cvReleaseImage(&image);
-	cvReleaseImage(&pre_image);
-}
-
-void borderPointAroundMouse(int event, int x, int y, int flags, void *param) {
-	struct seq_data *data = (struct seq_data *)param;
-
-	fixCoordinates(x, y, *(data->resolution));
-
-	// static function variables
-	static CvPoint first_point = cvPoint(-1, -1);
-	static CvPoint last_point = cvPoint(-1, -1);
-
-	// we have 2 states: non-confirming -- take a point and the draw it
-	// and show the image to the users with LMB, connect the last with the
-	// first with MMB
-	// confirming -- confirm the new point with LMB, and reject with RMB
-	// confirming == 2 -- means that we connected the last with the first
-	// and on LMB do nothing, on RMB reject it
-	static int confirming = 0;
-	static CvPoint new_point;
-	static IplImage *temp_img = createBlankCopy(data->img);
-
-	if(!confirming) {
-		if(event == CV_EVENT_LBUTTONUP) {
-			new_point = cvPoint(x,y);
-
-			// draw new image
-			cvCopy(data->img, temp_img);
-			cvCircle(temp_img, new_point, 1, cvScalar(255, 0, 0), 2);
-			if(last_point.x != -1) {
-				cvLine(temp_img, last_point, new_point, cvScalar(255, 0, 0), 1);
-			} else {
-				first_point = new_point;
-			}
-
-			cvShowImage("Borders Marker", temp_img);
-
-			confirming = 1;
-		} else if(event == CV_EVENT_MBUTTONUP) {
-			// connect to the first dot
-			cvCopy(data->img, temp_img);
-			if(last_point.x != -1) {
-				cvLine(temp_img, first_point, new_point, cvScalar(255, 0, 0), 1);
-			}
-
-			cvShowImage("Borders Marker", temp_img);
-
-			confirming = 2;
-		}
-	} else {
-		if(event == CV_EVENT_LBUTTONUP && confirming == 1) {
-			// add point to sequence
-			float scale_x = (float)(CUE_PYRDOWN_WIDTH+0.0f)/data->resolution->height;
-			float scale_y = (float)(CUE_PYRDOWN_HEIGHT+0.0f)/data->resolution->width;
-			cout<<scale_x<<" "<<scale_y<<endl;
-
-			CvPoint new_point_scaled = cvPoint(cvRound(x*scale_x), cvRound(y*scale_y)); 
-
-			cout<<"added: ("<<new_point_scaled.x<<", "<<new_point_scaled.y<<")\n";
-
-			CV_WRITE_SEQ_ELEM(new_point_scaled, *(data->writer));
-
-			last_point = new_point;
-			cvCopy(temp_img, data->img);
-
-			confirming = 0;
-		} else if(event == CV_EVENT_RBUTTONUP) {
-			cvShowImage("Borders Marker", data->img);
-
-			confirming = 0;
-		}
-	}
-}
-
 /* this lets the user mark the edges of the projection area */
 void learn_edges(CvSize resolution, int device_id) {
 	// init camera
 	VideoCapture capture(0, resolution.width, resolution.height);
 	IplImage *pre_image = capture.CreateCaptureImage();
 	IplImage *image = capture.CreateCaptureImage();
-	IplImage *scaled_image = cvCreateImage(cvSize(800, 600),
-		image->depth, image->nChannels);
 
 	cvNamedWindow("Edges Marker", CV_WINDOW_AUTOSIZE);
 
@@ -637,7 +501,7 @@ void learn_edges(CvSize resolution, int device_id) {
 	cvWarpPerspective(pre_image, image,	H,
 		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
 
-	cvShowImage("Edges Marker", scaled_image);
+	cvShowImage("Edges Marker", image);
 
 	// initialize data
 	CvMemStorage *mem = cvCreateMemStorage();
@@ -645,12 +509,12 @@ void learn_edges(CvSize resolution, int device_id) {
 	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
 
 	struct seq_data data;
-	data.img = scaled_image;
+	data.img = image;
 	data.resolution = &resolution;
 	data.writer = &writer;
 
 	// wait for user to mark
-	cvShowImage("Edges Marker", scaled_image);
+	cvShowImage("Edges Marker", image);
 	cvSetMouseCallback("Edges Marker", &edgePointAroundMouse, &data);
 	char c=cvWaitKey(0);
 
@@ -672,8 +536,6 @@ void learn_edges(CvSize resolution, int device_id) {
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	struct seq_data *data = (struct seq_data *)param;
 
-	fixCoordinates(x, y, *(data->resolution));
-
 	static CvPoint new_point;
 	static IplImage *temp_img = createBlankCopy(data->img);
 	static int confirming = 0;
@@ -686,7 +548,8 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 
 			// draw new image
 			cvCopy(data->img, temp_img);
-			cvCircle(temp_img, new_point, 1, cvScalar(255, 0, 0), 2);
+			fixCoordinates(x, y, *(data->resolution));
+			cvCircle(temp_img, cvPoint(x,y), 1, cvScalar(255, 0, 0), 2);
 
 			cvShowImage("Edges Marker", temp_img);
 
@@ -773,7 +636,7 @@ void watch(CvSize resolution, bool with_birds_eye, int device_id) {
 
 void fixCoordinates(int &x, int &y, CvSize resolution) {
 	if(resolution.width = 1600) {
-		x = (int)(x/1.25);
-		y = (int)(y/1.55);
+		x = (int)(x/(1600./1280));
+		y = (int)(y/(1200./1000));
 	}
 }
