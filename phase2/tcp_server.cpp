@@ -133,12 +133,12 @@ int TCPServer::update() {
 	}
 }
 
-void TCPServer::send_white_pos(float x, float y) {
+void TCPServer::send_ball_pos(float x, float y, char prefix) {
 	if(_client == 0)
 		return;
 
 	char buf[128];
-	_snprintf_s(buf, 128, "c%f,%f\n", x, y);
+	_snprintf_s(buf, 128, "%c%f,%f\n", prefix, x, y);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
 		printf("Error at send(): %ld\n", WSAGetLastError());
 		exit(1);

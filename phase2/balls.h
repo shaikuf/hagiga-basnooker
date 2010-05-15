@@ -13,6 +13,6 @@ vector<CvPoint> findBall(IplImage *img, IplImage *templ, int max_count,
 						 bool invert = false);
 
 /* Fix an absolute position on the image, to a position relative to the table */
-CvPoint2D32f fixPosition(CvPoint2D32f center);
+CvPoint2D32f fixPosition(CvPoint center);
 
 #endif

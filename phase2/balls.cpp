@@ -14,7 +14,7 @@ vector<CvPoint> findBall(IplImage *img, IplImage *templ, int max_count,
 	// find the template
 	vector<CvPoint> p;
 
-	if(invert) { /* TODO -- debug */
+	if(invert) {
 		IplImage *tmp = createBlankCopy(img);
 		cvCvtColor(img, tmp, CV_BGR2YCrCb);
 		cvNot(tmp, tmp);
@@ -29,7 +29,7 @@ vector<CvPoint> findBall(IplImage *img, IplImage *templ, int max_count,
 }
 
 /* Fix an absolute position on the image, to a position relative to the table */
-CvPoint2D32f fixPosition(CvPoint2D32f center) {
+CvPoint2D32f fixPosition(CvPoint center) {
 	
 	// read the edges calibration file
 	CvMemStorage *mem = cvCreateMemStorage();
@@ -49,11 +49,11 @@ CvPoint2D32f fixPosition(CvPoint2D32f center) {
 	double Y = sqrt(pow((double)p3.x-p0.x,2)+pow((double)p3.y-p0.y,2));
 
 	double theta = atan2((double)p2.y-p3.y, p2.x-p3.x);
-	double alpha = atan2(center.y-p3.y, center.x-p3.x);
+	double alpha = atan2((double)center.y-p3.y, (double)center.x-p3.x);
 
-	cout<<"theta="<<theta*180/PI<<"\n"<<"alpha="<<alpha*180/PI<<"\n";
+	//cout<<"theta="<<theta*180/PI<<"\n"<<"alpha="<<alpha*180/PI<<"\n";
 	
-	double L = sqrt(pow(center.x-p3.x, 2) + pow(center.y-p3.y, 2));
+	double L = sqrt(pow((double)center.x-p3.x, 2) + pow((double)center.y-p3.y, 2));
 
 	double A = L*cos(alpha-theta);
 	double B = L*sin(alpha-theta);

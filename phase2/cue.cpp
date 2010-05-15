@@ -48,7 +48,8 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 	return theta;
 }
 
-bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta) {
+bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
+							 vector<CvPoint> *ball_centers, int ball_centers_num) {
 	static bool once = true;
 
 	if(once && CUE_FIND_DEBUG) {
@@ -66,10 +67,13 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta)
 		cvShowImage("gray", gray);
 	}
 
-	// TODO paint all balls black, because their centers are glowing
 	// paint the white ball black so it wont be found
-	cvCircle(gray, white_center,
-		1, cvScalar(0), BALL_DIAMETER);
+	for(int i=0; i<ball_centers_num; i++) {
+		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
+			cvCircle(gray, ball_centers[i][j],
+				1, cvScalar(0), BALL_DIAMETER);
+		}
+	}
 
 	// threshold to leave only white markers
 	IplImage* thresh = createBlankCopy(gray);

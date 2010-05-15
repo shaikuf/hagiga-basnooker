@@ -19,7 +19,8 @@ using namespace std;
 double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center);
 
 /* Find the parameters of the cue using the white markers */
-bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta);
+bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
+							 vector<CvPoint> *ball_centers, int ball_centers_num);
 
 
 #endif

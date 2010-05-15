@@ -61,18 +61,22 @@ void gameLoop(CvSize resolution, int device_id) {
 	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
 
 	// load ball templates
-	IplImage *templates[8];
-	char *filenames[] = {"white-templ.jpg", "red-templ.jpg", "black-templ.jpg",
-		"yellow-templ.jpg", "green-templ.jpg", "pink-templ.jpg", "brown-templ.jpg",
-		"blue-templ.jpg"};
-	CvScalar colors[8] = {cvScalar(0,0,0), cvScalar(255, 255, 0), cvScalar(255, 255, 255),
-		cvScalar(255, 0, 0), cvScalar(255, 0, 255), cvScalar(52, 63, 0), cvScalar(255, 180, 105),
-		cvScalar(0, 255, 255)};
-	vector<CvPoint> ball_center[8];
+	IplImage *ball_templates[8];
+	char *ball_filenames[8] = {"white-templ.jpg", "red-templ.jpg",
+		"black-templ.jpg", "yellow-templ.jpg", "green-templ.jpg",
+		"pink-templ.jpg", "brown-templ.jpg", "blue-templ.jpg"};
+	CvScalar ball_inv_colors[8] = {cvScalar(0,0,0), cvScalar(255, 255, 0),
+		cvScalar(255, 255, 255), cvScalar(255, 0, 0), cvScalar(255, 0, 255),
+		cvScalar(52, 63, 0), cvScalar(255, 180, 105), cvScalar(0, 255, 255)};
+	int ball_counts[8] = {1, 15, 1, 1, 1, 1, 1, 1};
+	bool ball_inv_templ[8] = {false, false, true, false, false, false, false,
+		false};
+	char ball_tcp_prefix[8] = {'w', 'r', 'b', 'y', 'g', 'p', 'o', 'l'};
+	vector<CvPoint> ball_centers[8];
 
 	int i;
 	for(i=0; i<NUM_BALLS; i++) {
-		templates[i] = cvLoadImage(filenames[i]);
+		ball_templates[i] = cvLoadImage(ball_filenames[i]);
 	}
 
 	// load projective transformation matrix
@@ -105,30 +109,32 @@ void gameLoop(CvSize resolution, int device_id) {
 		}
 
 		if(FIND_BALLS) {
-			// find balls
 			if(find_balls) {
+				// find balls
 				for(i=0; i<NUM_BALLS; i++) {
-					vector<CvPoint> res = findBall(image, templates[i], (i==1)?15:1, i==2);
-					ball_center[i] = res;
-					if(ball_center[i].size() > 0) {
-						cout<<filenames[i]<<" ("<<ball_center[i].front().x<<", "<<ball_center[i].front().y<<")\n";
-					} else {
-						cout<<filenames[i]<<" not found"<<endl;
+					vector<CvPoint> res = findBall(image, ball_templates[i], ball_counts[i],
+						ball_inv_templ[i]);
+					ball_centers[i] = res;
+				}
+
+				// send to client
+				CvPoint2D32f normed_pos;
+				for(i=0; i<NUM_BALLS; i++) {
+					for(unsigned int j=0; j<ball_centers[i].size(); j++) {
+						normed_pos = fixPosition(ball_centers[i][j]);
+						tcp_server.send_ball_pos(normed_pos.x, normed_pos.y, ball_tcp_prefix[i]);
+						cout<<"Sending: "<<ball_tcp_prefix[i]<<normed_pos.x<<","<<
+							normed_pos.y<<endl;
 					}
 				}
 
 				find_balls = false;
-
-				// send white ball to client
-				/*CvPoint2D32f normed_pos = fixPosition(ball_center[0]);
-				tcp_server.send_white_pos(normed_pos.x, normed_pos.y);
-				cout<<"Sending: ("<<normed_pos.x<<", "<<normed_pos.y<<")\n";*/
 			}
 
 			// mark balls
 			for(i=0; i<NUM_BALLS; i++) {
-				for(unsigned int j=0; j < ball_center[i].size(); j++)
-					markCross(image, ball_center[i][j], colors[i]);
+				for(unsigned int j=0; j < ball_centers[i].size(); j++)
+					markCross(image, ball_centers[i][j], ball_inv_colors[i]);
 			}
 		}
 
@@ -136,7 +142,8 @@ void gameLoop(CvSize resolution, int device_id) {
 			// find the cue
 			//findCueWithWhiteMarkers(image, &cue_m, &cue_cm, ball_center[0].front());
 			double theta;
-			bool res = findCueWithWhiteMarkers(image, ball_center[0].front(), &theta);
+			bool res = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
+				ball_centers, NUM_BALLS);
 
 			if(res) { // we found the cue
 				// send angle to client
@@ -154,5 +161,5 @@ void gameLoop(CvSize resolution, int device_id) {
 	cvReleaseImage(&pre_image);
 	cvReleaseImage(&image);
 	for(i=0; i<NUM_BALLS; i++)
-		cvReleaseImage(&templates[i]);
+		cvReleaseImage(&ball_templates[i]);
 }
