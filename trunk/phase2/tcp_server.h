@@ -12,6 +12,6 @@ public:
 
 	int update();
 
-	void send_white_pos(float x, float y);
+	void send_ball_pos(float x, float y, char prefix);
 	void send_theta(double theta);
 };
