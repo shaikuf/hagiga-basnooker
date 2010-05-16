@@ -10,7 +10,7 @@ using namespace std;
 #define PI 3.14159265
 
 #define SAVE_IMAGES 0
-#define FIND_TEMPL_DEBUG 0
+#define FIND_TEMPL_DEBUG 1
 
 #define USE_BIRDS_EYE 1
 

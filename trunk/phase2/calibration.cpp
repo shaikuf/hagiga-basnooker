@@ -443,17 +443,13 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	fixCoordinates(x, y, cvSize(img->width, img->height));
 
-	int crop_size = 50;
+	// set overlay and crop
+	IplImage *templ = overlay_template(img, cvPoint(x,y));
+	if(templ == 0)
+		return;
 	
-	// crop template
-	CvRect crop_rect = cvRect(	MAX(cvRound(x - crop_size/2), 0),
-		MAX(cvRound(y - crop_size/2), 0), crop_size, crop_size);
-	cvSetImageROI(img, crop_rect);
-
-	cvShowImage("New Template", img);
-
 	// save template
-	int opt_count = 1;
+	int opt_count = 8;
 	char *names[] = {"White", "Red", "Blue", "Yellow", "Green", "Pink", "Brown",
 		"Black"};
 	char *filenames[] = {"white-templ.jpg", "red-templ.jpg", "blue-templ.jpg",
@@ -474,13 +470,16 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	if(choice != -1) {
 		printf("Saved as %s\n", filenames[choice]);
-		cvSaveImage(filenames[choice], img);
+		cvSaveImage(filenames[choice], templ);
 	} else {
 		printf("Rejected\n");
 	}
 
 	// clear the ROI we set
 	cvResetImageROI(img);
+
+	// release stuff
+	cvReleaseImage(&templ);
 }
 
 /* this lets the user mark the edges of the projection area */
@@ -638,6 +637,265 @@ void watch(CvSize resolution, bool with_birds_eye, int device_id) {
 void fixCoordinates(int &x, int &y, CvSize resolution) {
 	if(resolution.width = 1600) {
 		x = (int)(x/(1600./1280));
-		y = (int)(y/(1200./1000));
+		y = (int)(y/(1200./997));
+	}
+}
+
+/* this lets the user mark the edges of the projection area */
+/*void grab_all_templates(CvSize resolution, int device_id) {
+	// init camera
+	VideoCapture capture(0, resolution.width, resolution.height);
+	IplImage *pre_image = capture.CreateCaptureImage();
+	IplImage *image = capture.CreateCaptureImage();
+
+	cvNamedWindow("All Templates Grabber", CV_WINDOW_AUTOSIZE);
+
+	// load data from files
+	char filename[100];
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	CvMat* H = (CvMat*)cvLoad(filename);
+
+	capture.waitFrame(pre_image); // capture frame
+	cvWarpPerspective(pre_image, image,	H,
+		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+
+	cvShowImage("All Templates Grabber", image);
+
+	// initialize data
+	CvMemStorage *mem = cvCreateMemStorage();
+	CvSeqWriter writer;
+	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
+
+	struct seq_data data;
+	data.img = image;
+	data.resolution = &resolution;
+	data.writer = &writer;
+
+	// wait for user to mark
+	cvShowImage("All Templates Grabber", image);
+	cvSetMouseCallback("All Templates Grabber", &grabAllTemplatesMouseHandler, &data);
+	char c=cvWaitKey(0);
+
+	// save borders
+	CvSeq* edges = cvEndWriteSeq(&writer);
+
+	// release stuff
+	capture.stop();
+	cvDestroyWindow("Edges Marker");
+
+	cvReleaseMat(&H);
+	cvReleaseImage(&pre_image);
+
+	// actually grab the templates
+	grab_all_templates_overlay(image, *(CvPoint*)cvGetSeqElem(edges, 0),
+		*(CvPoint*)cvGetSeqElem(edges, 1));
+
+	cvReleaseImage(&image);
+}
+
+void grab_all_templates_overlay(IplImage *img, CvPoint bl, CvPoint tr) {
+
+}
+
+void grabAllTemplatesMouseHandler(int event, int x, int y, int flags, void *param) {
+	struct seq_data *data = (struct seq_data *)param;
+
+	fixCoordinates(x, y, *(data->resolution));
+
+	static CvPoint new_point;
+	static IplImage *temp_img = createBlankCopy(data->img);
+	static int confirming = 0;
+
+	// pretty much the same as borders marking
+
+	if(!confirming) {
+		if(event == CV_EVENT_LBUTTONUP) {
+			new_point = cvPoint(x,y);		
+
+			// draw new image
+			cvCopy(data->img, temp_img);
+			cvCircle(temp_img, new_point, 1, cvScalar(255, 0, 0), 2);
+
+			cvShowImage("All Templates Grabber", temp_img);
+
+			confirming = 1;
+		}
+	} else {
+		if(event == CV_EVENT_LBUTTONUP) {
+			// add point to sequence
+			cout<<"added: ("<<x<<", "<<y<<")\n";
+
+			CV_WRITE_SEQ_ELEM(cvPoint(x, y), *(data->writer));
+
+			cvCopy(temp_img, data->img);
+
+			confirming = 0;
+		} else if(event == CV_EVENT_RBUTTONUP) {
+			cvShowImage("All Templates Grabber", data->img);
+
+			confirming = 0;
+		}
+	}
+}*/
+
+IplImage *overlay_template(IplImage *src, CvPoint center) {
+	cvNamedWindow("New Template", CV_WINDOW_AUTOSIZE);
+
+	IplImage* overlay;
+
+	int width = BALL_DIAMETER;
+	int height = BALL_DIAMETER;
+	int x = center.x-width/2;
+	int y = center.y-height/2;
+
+	int d_width = 0, d_height = 0;
+	int gradient = 0;
+
+	int hide_overlay = 1;
+	int invert = 0;
+
+	cvSetImageROI(src, cvRect(x, y, width, height));
+	overlay = createBlankCopy(src);
+	setOverlay(overlay, d_width, d_height, gradient);
+	IplImage *tmp = createBlankCopy(overlay);
+	IplImage *tmp_zoom = cvCreateImage(cvSize(overlay->width*2, overlay->height*2),
+		overlay->depth, overlay->nChannels);
+	if(!hide_overlay)
+		cvMul(src, overlay, tmp, 1.0/255);
+	else
+		cvCopy(src, tmp);
+	cvPyrUp(tmp, tmp_zoom);
+	cvShowImage("New Template", tmp_zoom);
+	cvReleaseImage(&tmp);
+	cvReleaseImage(&tmp_zoom);
+
+	char key = 0;
+	while(key != 27) {
+		key = cvWaitKey(0);
+
+		switch(key) {
+			case 'i':
+				y--;
+				break;
+			case 'k':
+				y++;
+				break;
+			case 'j':
+				x--;
+				break;
+			case 'l':
+				x++;
+				break;
+			case 'a':
+				width--;
+				break;
+			case 'd':
+				width++;
+				break;
+			case 'w':
+				height--;
+				break;
+			case 's':
+				height++;
+				break;
+			case 'h':
+				hide_overlay = 1-hide_overlay;
+				break;
+			case 'A':
+				d_width--;
+				break;
+			case 'D':
+				d_width++;
+				break;
+			case 'W':
+				d_height--;
+				break;
+			case 'S':
+				d_height++;
+				break;
+			case 'z':
+				if(gradient > 0)
+					gradient--;
+				break;
+			case 'x':
+				gradient++;
+				break;
+			case 'c':
+				invert = 1-invert;
+				break;
+		}
+
+		cvSetImageROI(src, cvRect(x, y, width, height));
+		cvReleaseImage(&overlay);
+		overlay = createBlankCopy(src);
+		setOverlay(overlay, d_width, d_height, gradient);
+
+		tmp = createBlankCopy(overlay);
+		tmp_zoom = cvCreateImage(cvSize(overlay->width*2, overlay->height*2),
+			overlay->depth, overlay->nChannels);;
+		if(invert) {
+			IplImage *src_i = createBlankCopy(src);
+			cvCvtColor(src, src_i, CV_BGR2YCrCb);
+			cvNot(src_i, src_i);
+			cvCvtColor(src_i, src, CV_YCrCb2BGR);
+			cvReleaseImage(&src_i);
+		}
+		if(!hide_overlay)
+			cvMul(src, overlay, tmp, 1.0/255);
+		else
+			cvCopy(src, tmp);
+		if(invert) {
+			IplImage *src_i = createBlankCopy(src);
+			cvCvtColor(src, src_i, CV_BGR2YCrCb);
+			cvNot(src_i, src_i);
+			cvCvtColor(src_i, src, CV_YCrCb2BGR);
+			cvReleaseImage(&src_i);
+		}
+		cvPyrUp(tmp, tmp_zoom);
+		cvShowImage("New Template", tmp_zoom);
+		cvReleaseImage(&tmp);
+		cvReleaseImage(&tmp_zoom);
+	}
+
+	tmp = createBlankCopy(overlay);
+	if(invert) {
+			IplImage *src_i = createBlankCopy(src);
+			cvCvtColor(src, src_i, CV_BGR2YCrCb);
+			cvNot(src_i, src_i);
+			cvCvtColor(src_i, src, CV_YCrCb2BGR);
+			cvReleaseImage(&src_i);
+		}
+	cvMul(src, overlay, tmp, 1.0/255);
+	if(invert) {
+			IplImage *src_i = createBlankCopy(src);
+			cvCvtColor(src, src_i, CV_BGR2YCrCb);
+			cvNot(src_i, src_i);
+			cvCvtColor(src_i, src, CV_YCrCb2BGR);
+			cvReleaseImage(&src_i);
+	}
+
+	cvDestroyWindow("New Template");
+
+	return tmp;
+}
+
+void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient) {
+	cvSet(overlay, cvScalar(0));
+
+	CvBox2D bounding;
+	bounding.center.x = (float)(overlay->width+0.)/2;
+	bounding.center.y = (float)(overlay->height+0.)/2;
+	bounding.angle = 0;
+	bounding.size.width = (float)(overlay->width - d_width);
+	bounding.size.height = (float)(overlay->height - d_height);
+
+	cvEllipseBox(overlay, bounding, cvScalar(255,255,255), -1);
+
+	for(int j=1; j<=gradient; j++) {
+		bounding.size.width = (float)(overlay->width - d_width + j);
+		bounding.size.height = (float)(overlay->height - d_height + j);
+		
+		int c = (int)((gradient-j+1)*(255/(gradient+1.)));
+		cvEllipseBox(overlay, bounding, cvScalar(c,c,c), 1);
 	}
 }
