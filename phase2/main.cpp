@@ -120,6 +120,7 @@ void gameLoop(CvSize resolution, int device_id) {
 				}
 
 				// send to client
+				tcp_server.send_raw("start\n");
 				CvPoint2D32f normed_pos;
 				for(i=0; i<NUM_BALLS; i++) {
 					for(unsigned int j=0; j<ball_centers[i].size(); j++) {
@@ -129,6 +130,7 @@ void gameLoop(CvSize resolution, int device_id) {
 							normed_pos.y<<endl;
 					}
 				}
+				tcp_server.send_raw("end\n");
 
 				find_balls = false;
 			}
