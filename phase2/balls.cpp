@@ -51,7 +51,9 @@ CvPoint2D32f fixPosition(CvPoint center) {
 	double theta = atan2((double)p2.y-p3.y, p2.x-p3.x);
 	double alpha = atan2((double)center.y-p3.y, (double)center.x-p3.x);
 
-	//cout<<"theta="<<theta*180/PI<<"\n"<<"alpha="<<alpha*180/PI<<"\n";
+	if(DEBUG_FIX_POS) {
+		cout<<"theta="<<theta*180/PI<<"\n"<<"alpha="<<alpha*180/PI<<"\n";
+	}
 	
 	double L = sqrt(pow((double)center.x-p3.x, 2) + pow((double)center.y-p3.y, 2));
 

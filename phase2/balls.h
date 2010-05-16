@@ -4,7 +4,11 @@
 #include <cv.h>
 #include <vector>
 
-using namespace std;
+#define DEBUG_FIX_POS 0
+
+/* This finds the ball matching the given template on the image */
+void findBall(IplImage *img, IplImage *templ, CvPoint2D32f *center,
+			  float *radius);
 
 #define BALL_CORR_THD 0.85
 

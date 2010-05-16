@@ -335,37 +335,64 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 		CvPoint2D32f tmp;
 		key = cvWaitKey();
 		switch(key) {
-			case 'u':
+			case 'u': // up on the Z axis
 				Z += z_delta;
 				break;
-			case 'd':
+			case 'd': // down on the Z axis
 				Z -= z_delta;
 				break;
-			case 'i':
+			case 'i': // up on X-Y
 				for(int i=0; i<num_of_points; i++)
 					CV_MAT_ELEM(*objPts, float, 1, i) += movement_delta;
 				cvFindHomography(objPts, imgPts, H);
 				break;
-			case 'j':
+			case 'j': // left on X-Y
 				for(int i=0; i<num_of_points; i++)
 					CV_MAT_ELEM(*objPts, float, 0, i) += movement_delta;
 				cvFindHomography(objPts, imgPts, H);
 				break;
-			case 'k':
+			case 'k': // down on X-Y
 				for(int i=0; i<num_of_points; i++)
 					CV_MAT_ELEM(*objPts, float, 1, i) -= movement_delta;
 				cvFindHomography(objPts, imgPts, H);
 				break;
-			case 'l':
+			case 'l': // right on X-Y
 				for(int i=0; i<num_of_points; i++)
 					CV_MAT_ELEM(*objPts, float, 0, i) -= movement_delta;
 				cvFindHomography(objPts, imgPts, H);
 				break;
 			case 't':
-				// flip horiz.
+			case 't': // flip horizontally
+				for(int i=0; i<board_h; i++) {
+					for(int j=0; j<board_w/2; j++) {
+						tmp.x = CV_MAT_ELEM(*objPts, float, 0, j*board_w+i);
+						tmp.y = CV_MAT_ELEM(*objPts, float, 1, j*board_w+i);
+
+						CV_MAT_ELEM(*objPts, float, 0, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 0, j*(board_w+1)-i-1);
+						CV_MAT_ELEM(*objPts, float, 1, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 1, j*(board_w+1)-i-1);
+
+						CV_MAT_ELEM(*objPts, float, 0, j*(board_w+1)-i-1) = tmp.x;
+						CV_MAT_ELEM(*objPts, float, 1, j*(board_w+1)-i-1) = tmp.y;
+					}
+				}
 				break;
-			case 'y':
-				// flip vert.
+			case 'y': // flip vertically
+				for(int j=0; j<board_w; j++) {
+					for(int i=0; i<board_h/2; i++) {
+						tmp.x = CV_MAT_ELEM(*objPts, float, 0, j*board_w+i);
+						tmp.y = CV_MAT_ELEM(*objPts, float, 1, j*board_w+i);
+
+						CV_MAT_ELEM(*objPts, float, 0, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 0, (board_h-j-1)*board_w+i);
+						CV_MAT_ELEM(*objPts, float, 1, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 1, (board_h-j-1)*board_w+i);
+
+						CV_MAT_ELEM(*objPts, float, 0, (board_h-j-1)*board_w+i) = tmp.x;
+						CV_MAT_ELEM(*objPts, float, 1, (board_h-j-1)*board_w+i) = tmp.y;
+					}
+				}
 				break;
 			case 'o':
 				// rotate clockwise
