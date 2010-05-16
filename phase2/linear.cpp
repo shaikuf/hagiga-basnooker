@@ -10,18 +10,29 @@ line parameters */
 vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 								 double min_coeff, double *line_m,
 								 double *line_n, CvPoint *line_cm) {
+
+	// less than 2 blobs :/
+	if(points.size() < 2) {
+		line_cm->x = -1;
+		line_cm->y = -1;
+		vector<CvPoint> empty;
+		return empty;
+	}
+
+	// the vector of final points
 	vector<CvPoint2D32f> d_points(points);
 
+	// regression parameters
 	double m_a, m_b, m_coeff = 0;
 
-	while(m_coeff < min_coeff && d_points.size() >= 2) {
-		linearRegression(d_points, m_a, m_b, m_coeff);
+	// find the linear regression
+	linearRegression(d_points, &m_a, &m_b, &m_coeff);
 
-		// delete the furthest point
+	// while it's not good enought and we have enough points
+	while(m_coeff < min_coeff && d_points.size() >= 2) {
+		// find the furthest point
 		vector<CvPoint2D32f>::iterator max_iter = d_points.begin();
 		double max_dist = distFromLine(max_iter->x, max_iter->y, m_a, m_b);
-
-		
 		vector<CvPoint2D32f>::iterator iter = max_iter+1;
 		while(iter != d_points.end()) {
 			double new_dist;
@@ -32,9 +43,14 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 			iter++;
 		}
 
+		// delete it
 		d_points.erase(max_iter);
+
+		// find the new linear regression
+		linearRegression(d_points, &m_a, &m_b, &m_coeff);
 	}
 
+	// if we didn't found a line good enough
 	if(d_points.size() < 2) {
 		line_cm->x = -1;
 		line_cm->y = -1;
@@ -42,6 +58,7 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 		return empty;
 	}
 
+	// find the center of mass and create the output vector
 	double cm_x = 0, cm_y = 0;
 
 	vector<CvPoint> res_points;
@@ -67,8 +84,8 @@ double distFromLine(double x, double y, double m_a, double m_b) {
 }
 
 /* this finds the line parameters and R^2 of a list of points */
-void linearRegression(vector<CvPoint2D32f> points, double &m_a, double &m_b,
-					  double &m_coeff) {
+void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
+					  double *m_coeff) {
 	int n = points.size();
 
 	// calculate means
@@ -94,9 +111,9 @@ void linearRegression(vector<CvPoint2D32f> points, double &m_a, double &m_b,
 	r_xy /= std_x*std_y*(n-1);
 
 	// calculate fit coefficients
-	m_b = r_xy*std_y/std_x;
-	m_a = mean_y - m_b*mean_x;
+	*m_b = r_xy*std_y/std_x;
+	*m_a = mean_y - (*m_b)*mean_x;
 	
 	// calculate r^2
-	m_coeff = r_xy*r_xy;
+	*m_coeff = r_xy*r_xy;
 }

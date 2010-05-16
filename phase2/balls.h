@@ -7,6 +7,7 @@
 using namespace std;
 
 #define DEBUG_FIX_POS 0
+
 #define BALL_CORR_THD 0.85
 
 /* This finds the balls matching the given template on the image */

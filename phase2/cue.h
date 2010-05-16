@@ -7,6 +7,7 @@
 using namespace std;
 
 #define CUE_FIND_DEBUG 1
+
 #define CUE_MIN_COEFF 0.99
 #define CUE_MAX_DIST_FROM_WHITE 15.0
 #define CUE_THRESH_VAL 220

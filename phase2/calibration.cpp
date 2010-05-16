@@ -667,198 +667,113 @@ void fixCoordinates(int &x, int &y, CvSize resolution) {
 	}
 }
 
-/* this lets the user mark the edges of the projection area */
-/*void grab_all_templates(CvSize resolution, int device_id) {
-	// init camera
-	VideoCapture capture(0, resolution.width, resolution.height);
-	IplImage *pre_image = capture.CreateCaptureImage();
-	IplImage *image = capture.CreateCaptureImage();
-
-	cvNamedWindow("All Templates Grabber", CV_WINDOW_AUTOSIZE);
-
-	// load data from files
-	char filename[100];
-	_snprintf_s(filename, 100, "H-%d.xml", device_id);
-	CvMat* H = (CvMat*)cvLoad(filename);
-
-	capture.waitFrame(pre_image); // capture frame
-	cvWarpPerspective(pre_image, image,	H,
-		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
-
-	cvShowImage("All Templates Grabber", image);
-
-	// initialize data
-	CvMemStorage *mem = cvCreateMemStorage();
-	CvSeqWriter writer;
-	cvStartWriteSeq(CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), mem, &writer);
-
-	struct seq_data data;
-	data.img = image;
-	data.resolution = &resolution;
-	data.writer = &writer;
-
-	// wait for user to mark
-	cvShowImage("All Templates Grabber", image);
-	cvSetMouseCallback("All Templates Grabber", &grabAllTemplatesMouseHandler, &data);
-	char c=cvWaitKey(0);
-
-	// save borders
-	CvSeq* edges = cvEndWriteSeq(&writer);
-
-	// release stuff
-	capture.stop();
-	cvDestroyWindow("Edges Marker");
-
-	cvReleaseMat(&H);
-	cvReleaseImage(&pre_image);
-
-	// actually grab the templates
-	grab_all_templates_overlay(image, *(CvPoint*)cvGetSeqElem(edges, 0),
-		*(CvPoint*)cvGetSeqElem(edges, 1));
-
-	cvReleaseImage(&image);
-}
-
-void grab_all_templates_overlay(IplImage *img, CvPoint bl, CvPoint tr) {
-
-}
-
-void grabAllTemplatesMouseHandler(int event, int x, int y, int flags, void *param) {
-	struct seq_data *data = (struct seq_data *)param;
-
-	fixCoordinates(x, y, *(data->resolution));
-
-	static CvPoint new_point;
-	static IplImage *temp_img = createBlankCopy(data->img);
-	static int confirming = 0;
-
-	// pretty much the same as borders marking
-
-	if(!confirming) {
-		if(event == CV_EVENT_LBUTTONUP) {
-			new_point = cvPoint(x,y);		
-
-			// draw new image
-			cvCopy(data->img, temp_img);
-			cvCircle(temp_img, new_point, 1, cvScalar(255, 0, 0), 2);
-
-			cvShowImage("All Templates Grabber", temp_img);
-
-			confirming = 1;
-		}
-	} else {
-		if(event == CV_EVENT_LBUTTONUP) {
-			// add point to sequence
-			cout<<"added: ("<<x<<", "<<y<<")\n";
-
-			CV_WRITE_SEQ_ELEM(cvPoint(x, y), *(data->writer));
-
-			cvCopy(temp_img, data->img);
-
-			confirming = 0;
-		} else if(event == CV_EVENT_RBUTTONUP) {
-			cvShowImage("All Templates Grabber", data->img);
-
-			confirming = 0;
-		}
-	}
-}*/
-
+/* grab a customized template */
 IplImage *overlay_template(IplImage *src, CvPoint center) {
 	cvNamedWindow("New Template", CV_WINDOW_AUTOSIZE);
 
-	IplImage* overlay;
+	IplImage* overlay, *tmp, *tmp_zoom;
 
+	// parameters of the transformation
+		// crop
 	int width = BALL_DIAMETER;
 	int height = BALL_DIAMETER;
 	int x = center.x-width/2;
 	int y = center.y-height/2;
 
+		// overlay
 	int d_width = 0, d_height = 0;
 	int gradient = 0;
 
+		// general
 	int hide_overlay = 1;
 	int invert = 0;
 
+	// ==== create preview image ====
+		// crop
 	cvSetImageROI(src, cvRect(x, y, width, height));
+		// create overlay image
 	overlay = createBlankCopy(src);
 	setOverlay(overlay, d_width, d_height, gradient);
-	IplImage *tmp = createBlankCopy(overlay);
-	IplImage *tmp_zoom = cvCreateImage(cvSize(overlay->width*2, overlay->height*2),
+		// set overlay and create zoomed version
+	tmp = createBlankCopy(overlay);
+	tmp_zoom = cvCreateImage(cvSize(overlay->width*2, overlay->height*2),
 		overlay->depth, overlay->nChannels);
 	if(!hide_overlay)
 		cvMul(src, overlay, tmp, 1.0/255);
 	else
 		cvCopy(src, tmp);
 	cvPyrUp(tmp, tmp_zoom);
+		// show the preview and release
 	cvShowImage("New Template", tmp_zoom);
 	cvReleaseImage(&tmp);
 	cvReleaseImage(&tmp_zoom);
+	cvReleaseImage(&overlay);
+	// ==============================
 
 	char key = 0;
 	while(key != 27) {
 		key = cvWaitKey(0);
 
 		switch(key) {
-			case 'i':
+			case 'i': // move the crop up
 				y--;
 				break;
-			case 'k':
+			case 'k': // move the crop down
 				y++;
 				break;
-			case 'j':
+			case 'j': // move the crop left
 				x--;
 				break;
-			case 'l':
+			case 'l': // move the crop right
 				x++;
 				break;
-			case 'a':
+			case 'a': // crop less wide
 				width--;
 				break;
-			case 'd':
+			case 'd': // crop wider
 				width++;
 				break;
-			case 'w':
+			case 'w': // crop less tall
 				height--;
 				break;
-			case 's':
+			case 's': // crop taller
 				height++;
 				break;
-			case 'h':
+			case 'h': // hide the overlay
 				hide_overlay = 1-hide_overlay;
 				break;
-			case 'A':
+			case 'A': // overlay less wide
 				d_width--;
 				break;
-			case 'D':
+			case 'D': // overlay wider
 				d_width++;
 				break;
-			case 'W':
+			case 'W': // overlay less tall
 				d_height--;
 				break;
-			case 'S':
+			case 'S': // overlay taller
 				d_height++;
 				break;
-			case 'z':
+			case 'z': // overlay less transparent
 				if(gradient > 0)
 					gradient--;
 				break;
-			case 'x':
+			case 'x': // overlay more transparent
 				gradient++;
 				break;
-			case 'c':
+			case 'c': // invert image
 				invert = 1-invert;
 				break;
 		}
 
+
+		// ==== create preview image ====
+		// crop
 		cvSetImageROI(src, cvRect(x, y, width, height));
-		cvReleaseImage(&overlay);
+			// create overlay image
 		overlay = createBlankCopy(src);
 		setOverlay(overlay, d_width, d_height, gradient);
-
-		tmp = createBlankCopy(overlay);
-		tmp_zoom = cvCreateImage(cvSize(overlay->width*2, overlay->height*2),
-			overlay->depth, overlay->nChannels);;
+			// invert if needed
 		if(invert) {
 			IplImage *src_i = createBlankCopy(src);
 			cvCvtColor(src, src_i, CV_BGR2YCrCb);
@@ -866,10 +781,16 @@ IplImage *overlay_template(IplImage *src, CvPoint center) {
 			cvCvtColor(src_i, src, CV_YCrCb2BGR);
 			cvReleaseImage(&src_i);
 		}
+			// set overlay and create zoomed version
+		tmp = createBlankCopy(overlay);
+		tmp_zoom = cvCreateImage(cvSize(overlay->width*2, overlay->height*2),
+			overlay->depth, overlay->nChannels);
 		if(!hide_overlay)
 			cvMul(src, overlay, tmp, 1.0/255);
 		else
 			cvCopy(src, tmp);
+		cvPyrUp(tmp, tmp_zoom);
+			// undo invert if needed
 		if(invert) {
 			IplImage *src_i = createBlankCopy(src);
 			cvCvtColor(src, src_i, CV_BGR2YCrCb);
@@ -877,37 +798,56 @@ IplImage *overlay_template(IplImage *src, CvPoint center) {
 			cvCvtColor(src_i, src, CV_YCrCb2BGR);
 			cvReleaseImage(&src_i);
 		}
-		cvPyrUp(tmp, tmp_zoom);
+			// show the preview and release
 		cvShowImage("New Template", tmp_zoom);
+			// release temp images
 		cvReleaseImage(&tmp);
 		cvReleaseImage(&tmp_zoom);
+		cvReleaseImage(&overlay);
+		// ==============================
 	}
 
+	// ==== create final template ====
+		// crop
+	cvSetImageROI(src, cvRect(x, y, width, height));
+		// create overlay image
+	overlay = createBlankCopy(src);
+	setOverlay(overlay, d_width, d_height, gradient);
+		// invert if needed
+	if(invert) {
+		IplImage *src_i = createBlankCopy(src);
+		cvCvtColor(src, src_i, CV_BGR2YCrCb);
+		cvNot(src_i, src_i);
+		cvCvtColor(src_i, src, CV_YCrCb2BGR);
+		cvReleaseImage(&src_i);
+	}
+		// set overlay and create zoomed version
 	tmp = createBlankCopy(overlay);
-	if(invert) {
-			IplImage *src_i = createBlankCopy(src);
-			cvCvtColor(src, src_i, CV_BGR2YCrCb);
-			cvNot(src_i, src_i);
-			cvCvtColor(src_i, src, CV_YCrCb2BGR);
-			cvReleaseImage(&src_i);
-		}
 	cvMul(src, overlay, tmp, 1.0/255);
+		// undo invert if needed
 	if(invert) {
-			IplImage *src_i = createBlankCopy(src);
-			cvCvtColor(src, src_i, CV_BGR2YCrCb);
-			cvNot(src_i, src_i);
-			cvCvtColor(src_i, src, CV_YCrCb2BGR);
-			cvReleaseImage(&src_i);
+		IplImage *src_i = createBlankCopy(src);
+		cvCvtColor(src, src_i, CV_BGR2YCrCb);
+		cvNot(src_i, src_i);
+		cvCvtColor(src_i, src, CV_YCrCb2BGR);
+		cvReleaseImage(&src_i);
 	}
+		// release temp images
+	cvReleaseImage(&overlay);
+	// ===============================
 
+	// release stuff
 	cvDestroyWindow("New Template");
 
 	return tmp;
 }
 
+/* create a customized overlay */
 void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient) {
+		// set all black
 	cvSet(overlay, cvScalar(0));
 
+		// draw white ellipse
 	CvBox2D bounding;
 	bounding.center.x = (float)(overlay->width+0.)/2;
 	bounding.center.y = (float)(overlay->height+0.)/2;
@@ -917,11 +857,12 @@ void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient) {
 
 	cvEllipseBox(overlay, bounding, cvScalar(255,255,255), -1);
 
+		// draw gradient
 	for(int j=1; j<=gradient; j++) {
-		bounding.size.width = (float)(overlay->width - d_width + j);
-		bounding.size.height = (float)(overlay->height - d_height + j);
+		bounding.size.width += 1;
+		bounding.size.height += 1;
 		
-		int c = (int)((gradient-j+1)*(255/(gradient+1.)));
-		cvEllipseBox(overlay, bounding, cvScalar(c,c,c), 1);
+		int color = (int)((gradient-j+1)*(255/(gradient+1.)));
+		cvEllipseBox(overlay, bounding, cvScalar(color,color,color), 1);
 	}
 }

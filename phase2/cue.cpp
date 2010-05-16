@@ -48,6 +48,7 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 	return theta;
 }
 
+/* Find the parameters of the cue using the white markers */
 bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 							 vector<CvPoint> *ball_centers, int ball_centers_num) {
 	static bool once = true;
@@ -67,7 +68,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		cvShowImage("gray", gray);
 	}
 
-	// paint the white ball black so it wont be found
+	// paint the balls black so they wont be found
 	for(int i=0; i<ball_centers_num; i++) {
 		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
 			cvCircle(gray, ball_centers[i][j],
@@ -145,13 +146,13 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		// filter those outside the borders by far
 	centers = filterPointsOnTable(centers, CUE_BLOB_MAX_DIST_FROM_TABLE);
 
-	// find the linear regression
+	// find the points with best linear regression
 	double cue_n;
 	double cue_m;
 	CvPoint cue_cm;
 
-	vector<CvPoint> real_centers = findPointsOnLine(centers, CUE_MIN_COEFF, &cue_m,
-		&cue_n, &cue_cm);
+	vector<CvPoint> real_centers = findPointsOnLine(centers, CUE_MIN_COEFF,
+		&cue_m, &cue_n, &cue_cm);
 
 	// perhaps filter the line
 	bool found_cue = true;
@@ -159,12 +160,13 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		found_cue = false;
 	} else { // check if the line is around the white ball
 		double d;
-		if((d = distFromLine(white_center.x, white_center.y, cue_n, cue_m)) > CUE_MAX_DIST_FROM_WHITE) {
+		if((d = distFromLine(white_center.x, white_center.y, cue_n, cue_m)) >
+			CUE_MAX_DIST_FROM_WHITE) {
 			// ignore this cue
 			found_cue = false;
 		}
 		if(CUE_FIND_DEBUG) {
-			cout<<d<<endl;
+			cout<<"dist from white: "<<d<<endl;
 		}
 	}
 
