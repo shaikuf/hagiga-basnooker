@@ -30,4 +30,8 @@ struct seq_data {
 	CvSize *resolution;
 };
 
+IplImage *overlay_template(IplImage *src, CvPoint center);
+
+void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient);
+
 #endif

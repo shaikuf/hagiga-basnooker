@@ -1,8 +1,8 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
-#define NUM_BALLS 7
-#define FIND_CUE 1
+#define NUM_BALLS 8
+#define FIND_CUE 0
 #define FIND_BALLS 1
 
 /* The main loop of the program */

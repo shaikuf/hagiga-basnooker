@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	cout<<"\t3: template grabbing\n\t4: learn edges\n";
 	cout<<"\t-1: watch with corrections\n";
 
-	int mode = -1;
+	int mode;
 	do {
 		cin>>mode;
 	} while (mode<-1 || mode > 5);
@@ -112,6 +112,8 @@ void gameLoop(CvSize resolution, int device_id) {
 			if(find_balls) {
 				// find balls
 				for(i=0; i<NUM_BALLS; i++) {
+					if(FIND_TEMPL_DEBUG)
+						cout<<"Finding "<<ball_filenames[i]<<endl;
 					vector<CvPoint> res = findBall(image, ball_templates[i], ball_counts[i],
 						ball_inv_templ[i]);
 					ball_centers[i] = res;
@@ -140,7 +142,6 @@ void gameLoop(CvSize resolution, int device_id) {
 
 		if(FIND_CUE) {
 			// find the cue
-			//findCueWithWhiteMarkers(image, &cue_m, &cue_cm, ball_center[0].front());
 			double theta;
 			bool res = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
 				ball_centers, NUM_BALLS);
@@ -155,6 +156,7 @@ void gameLoop(CvSize resolution, int device_id) {
 		c=cvWaitKey(100);
 	}
 
+	// release stuff
 	capture.stop();
 	cvDestroyWindow("Game");
 

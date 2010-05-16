@@ -18,7 +18,7 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 		img_s.height - templ_s.height + 1), IPL_DEPTH_32F, 1);
 
 	// get the correlation image
-	cvMatchTemplate(img, templ, match, CV_TM_CCOEFF_NORMED);
+	cvMatchTemplate(img, templ, match, CV_TM_CCORR_NORMED);
 
 	vector<CvPoint> res;
 
