@@ -157,3 +157,14 @@ void TCPServer::send_theta(double theta) {
 	}
 }
 
+void TCPServer::send_raw(char *str) {
+	if(_client == 0)
+		return;
+
+	char buf[128];
+	_snprintf_s(buf, 128, "%s", str);
+	if(send(_client, buf, strlen(buf), 0) == -1) {
+		printf("Error at send(): %ld\n", WSAGetLastError());
+		exit(1);
+	}
+}
