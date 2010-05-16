@@ -361,7 +361,6 @@ void birds_eye(int board_w, int board_h, float square_width, float square_height
 					CV_MAT_ELEM(*objPts, float, 0, i) -= movement_delta;
 				cvFindHomography(objPts, imgPts, H);
 				break;
-			case 't':
 			case 't': // flip horizontally
 				for(int i=0; i<board_h; i++) {
 					for(int j=0; j<board_w/2; j++) {
