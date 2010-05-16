@@ -12,6 +12,10 @@ void birds_eye(int board_w, int board_h, float board_width, float board_height,
 /* this lets the user click on balls and save them as templates */
 void grab_templates(CvSize resolution, int device_id);
 void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param);
+/* grab a customized template */
+IplImage *overlay_template(IplImage *src, CvPoint center);
+/* create a customized overlay */
+void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient);
 
 /* this lets the user mark the edges of the projection area */
 void learn_edges(CvSize resolution, int device_id);
@@ -29,9 +33,5 @@ struct seq_data {
 	CvSeqWriter *writer;
 	CvSize *resolution;
 };
-
-IplImage *overlay_template(IplImage *src, CvPoint center);
-
-void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient);
 
 #endif

@@ -13,8 +13,8 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 								 double *line_n, CvPoint *line_cm);
 
 /* this finds the line parameters and R^2 of a list of points */
-void linearRegression(vector<CvPoint2D32f> points, double &m_a, double &m_b,
-					  double &m_coeff);
+void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
+					  double *m_coeff);
 
 /* this finds the distance between a point (x,y) and a line: y = m_a + m_b*x */
 double distFromLine(double x, double y, double m_a, double m_b);

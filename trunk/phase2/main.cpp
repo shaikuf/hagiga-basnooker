@@ -151,7 +151,10 @@ void gameLoop(CvSize resolution, int device_id) {
 				tcp_server.send_theta(theta);
 			}
 		}
-
+		
+		if(DRAW_BORDERS) {
+			drawBorders(image, 1);
+		}
 		cvShowImage("Game", image);
 		c=cvWaitKey(100);
 	}

@@ -9,12 +9,11 @@ using namespace std;
 
 #define PI 3.14159265
 
-#define SAVE_IMAGES 0
 #define FIND_TEMPL_DEBUG 1
 
 #define USE_BIRDS_EYE 1
 
-#define BALL_DIAMETER 25
+#define BALL_DIAMETER 30
 
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */
@@ -28,7 +27,7 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 board borders */
 CvSeq *tableBorders();
 
-/* This finds and draws the borders of the table */
+/* This draws the borders of the table */
 void drawBorders(IplImage *dst, int width);
 
 /* This filters points which are outside tableBorders() */
@@ -40,6 +39,7 @@ bool isPointOnTable(CvPoint p, double max_dist);
 /* This marks a cross on the image */
 void markCross(IplImage *img, CvPoint center, CvScalar color);
 
+/* this checks if a variable (double) equals infinity */
 template<typename T>
 inline bool isinf(T value) {
 	return std::numeric_limits<T>::has_infinity &&
