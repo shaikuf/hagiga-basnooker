@@ -108,9 +108,9 @@ void gameLoop(CvSize resolution, int device_id) {
 			cvCopy(pre_image, image);
 		}
 
+		// find balls if needed
 		if(FIND_BALLS) {
 			if(find_balls) {
-				// find balls
 				for(i=0; i<NUM_BALLS; i++) {
 					if(FIND_TEMPL_DEBUG)
 						cout<<"Finding "<<ball_filenames[i]<<endl;
@@ -140,8 +140,8 @@ void gameLoop(CvSize resolution, int device_id) {
 			}
 		}
 
+		// find the cue
 		if(FIND_CUE) {
-			// find the cue
 			double theta;
 			bool res = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
 				ball_centers, NUM_BALLS);
@@ -152,6 +152,7 @@ void gameLoop(CvSize resolution, int device_id) {
 			}
 		}
 		
+		// draw the image
 		if(DRAW_BORDERS) {
 			drawBorders(image, 1);
 		}
