@@ -8,13 +8,13 @@ using namespace std;
 
 #define CUE_FIND_DEBUG 1
 
-#define CUE_MIN_COEFF 0.99
-#define CUE_MAX_DIST_FROM_WHITE 15.0
-#define CUE_THRESH_VAL 220
-#define CUE_OPENING_VAL 2
+#define CUE_MIN_COEFF 0.985
+#define CUE_MAX_DIST_FROM_WHITE 20.0
+#define CUE_THRESH_VAL 230
+#define CUE_OPENING_VAL 1
 #define CUE_CLOSING_VAL 4
 #define CUE_BLOB_MAX_SIZE 100
-#define CUE_BLOB_MAX_DIST_FROM_TABLE 50
+#define CUE_BLOB_MAX_DIST_FROM_TABLE 0
 
 /* Convert the line from center of mass and slope to theta */
 double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center);

@@ -62,16 +62,16 @@ void gameLoop(CvSize resolution, int device_id) {
 
 	// load ball templates
 	IplImage *ball_templates[8];
-	char *ball_filenames[8] = {"white-templ.jpg", "red-templ.jpg",
-		"black-templ.jpg", "yellow-templ.jpg", "green-templ.jpg",
-		"pink-templ.jpg", "brown-templ.jpg", "blue-templ.jpg"};
-	CvScalar ball_inv_colors[8] = {cvScalar(0,0,0), cvScalar(255, 255, 0),
-		cvScalar(255, 255, 255), cvScalar(255, 0, 0), cvScalar(255, 0, 255),
-		cvScalar(52, 63, 0), cvScalar(255, 180, 105), cvScalar(0, 255, 255)};
-	int ball_counts[8] = {1, 15, 1, 1, 1, 1, 1, 1};
-	bool ball_inv_templ[8] = {false, false, true, false, false, false, false,
-		false};
-	char ball_tcp_prefix[8] = {'w', 'r', 'b', 'y', 'g', 'p', 'o', 'l'};
+	char *ball_filenames[8] = {"white-templ.jpg", "pink-templ.jpg",
+		"yellow-templ.jpg", "green-templ.jpg", "brown-templ.jpg",
+		"blue-templ.jpg", "red-templ.jpg", "black-templ.jpg"};
+	CvScalar ball_inv_colors[8] = {cvScalar(0,0,0), cvScalar(52, 63, 0),
+		cvScalar(255, 0, 0), cvScalar(255, 0, 255),	cvScalar(255, 180, 105),
+		cvScalar(0, 255, 255), cvScalar(255, 255, 0), cvScalar(255, 255, 255)};
+	int ball_counts[8] = {1, 1, 1, 1, 1, 1, 15, 1};
+	bool ball_inv_templ[8] = {false, false, false, false, false, false, false,
+		true};
+	char ball_tcp_prefix[8] = {'w', 'p', 'y', 'g', 'o', 'l', 'r', 'b'};
 	vector<CvPoint> ball_centers[8];
 
 	int i;
@@ -91,9 +91,12 @@ void gameLoop(CvSize resolution, int device_id) {
 	bool find_balls = true;
 
 	TCPServer tcp_server;
+
+	printBorderAngles();
 	
 	// main loop
 	char c=0;
+	int theta_sending_i = 0;
 	while(c != 'q') {
 		// check for messages from the client
 		if(tcp_server.update())
@@ -108,16 +111,13 @@ void gameLoop(CvSize resolution, int device_id) {
 			cvCopy(pre_image, image);
 		}
 
+		paintHolesBlack(image);
+
 		// find balls if needed
 		if(FIND_BALLS) {
 			if(find_balls) {
-				for(i=0; i<NUM_BALLS; i++) {
-					if(FIND_TEMPL_DEBUG)
-						cout<<"Finding "<<ball_filenames[i]<<endl;
-					vector<CvPoint> res = findBall(image, ball_templates[i], ball_counts[i],
-						ball_inv_templ[i]);
-					ball_centers[i] = res;
-				}
+				findBalls(image, ball_templates, ball_counts, ball_inv_templ, ball_centers,
+					NUM_BALLS);
 
 				// send to client
 				tcp_server.send_raw("start\n");
@@ -144,13 +144,17 @@ void gameLoop(CvSize resolution, int device_id) {
 
 		// find the cue
 		if(FIND_CUE) {
-			double theta;
-			bool res = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
-				ball_centers, NUM_BALLS);
+			if(ball_centers[0].size() > 0) { // we found the white
+				double theta;
 
-			if(res) { // we found the cue
-				// send angle to client
-				tcp_server.send_theta(theta);
+				bool res = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
+					ball_centers, NUM_BALLS);
+
+				theta_sending_i = (theta_sending_i+1)%THETA_DOWNSAMPLE;
+				if(res && theta_sending_i == 0) { // we found the cue
+					// send angle to client
+					tcp_server.send_theta(theta);
+				}
 			}
 		}
 		

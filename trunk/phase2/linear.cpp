@@ -1,4 +1,5 @@
 #include "linear.h"
+#include "cue.h"
 #include <cv.h>
 #include <iostream>
 #include <vector>
@@ -75,6 +76,9 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 	*line_m = m_b;
 	*line_n = m_a;
 
+	if(CUE_FIND_DEBUG) {
+		cout<<"exiting with "<<m_coeff<<" from "<<res_points.size()<<" points"<<endl;
+	}
 	return res_points;
 }
 
@@ -97,7 +101,7 @@ void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 	mean_x /= n;
 	mean_y /= n;
 
-	// calculate std and sample correlation coefficient
+	// calculate std
 	double std_x = 0, std_y = 0;
 	double r_xy = 0;
 	for(int i=0; i<n; i++) {
@@ -106,14 +110,25 @@ void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 		std_y += diff_y*diff_y;
 		r_xy += diff_x*diff_y;
 	}
-	std_x = sqrt(std_x/n);
+	/*std_x = sqrt(std_x/n);
 	std_y = sqrt(std_y/n);
-	r_xy /= std_x*std_y*(n-1);
+	r_xy /= std_x*std_y*(n-1);*/
 
 	// calculate fit coefficients
-	*m_b = r_xy*std_y/std_x;
+	*m_b = r_xy / std_x;
+	// *m_b = r_xy*std_y/std_x;
 	*m_a = mean_y - (*m_b)*mean_x;
 	
 	// calculate r^2
-	*m_coeff = r_xy*r_xy;
+	double s_xy = 0, s_x = 0, s_y = 0, s_x2 = 0, s_y2 = 0;
+	for(int i=0; i<n; i++) {
+		s_xy += points[i].x*points[i].y;
+		s_x += points[i].x;
+		s_y += points[i].y;
+		s_x2 += points[i].x*points[i].x;
+		s_y2 += points[i].y*points[i].y;
+	}
+
+	double r = (n*s_xy - s_x*s_y)/(sqrt(n*s_x2 - s_x*s_x)*sqrt(n*s_y2 - s_y*s_y));
+	*m_coeff = r*r;
 }
