@@ -21,11 +21,14 @@ IplImage *createBlankCopy(IplImage *src, int channels = -1, int depth = -1);
 
 /* Finds the point which best matches the template */
 vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
-							 int max_count);
+							 int max_count, bool custom_norm = false);
 
 /* This returns a sequence of CvPoints specifying the contour of the
 board borders */
 CvSeq *tableBorders();
+
+/* Get the bounding rect of the table borders */
+CvRect tableBordersBoundingRect();
 
 /* This draws the borders of the table */
 void drawBorders(IplImage *dst, int width);
@@ -38,6 +41,12 @@ bool isPointOnTable(CvPoint p, double max_dist);
 
 /* This marks a cross on the image */
 void markCross(IplImage *img, CvPoint center, CvScalar color);
+
+/* this prints the angles of the edges calibration */
+void printBorderAngles();
+
+/* paints the holes of the table black */
+void paintHolesBlack(IplImage *img);
 
 /* this checks if a variable (double) equals infinity */
 template<typename T>

@@ -1,9 +1,3 @@
-// calib.cpp
-// Calling convention:
-// calib board_w board_h number_of_views
-//
-// Hit 'p' to pause/unpause, ESC to quit
-//
 #include <cv.h>
 #include <highgui.h>
 #include <stdio.h>
@@ -584,9 +578,9 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 	} else {
 		if(event == CV_EVENT_LBUTTONUP) {
 			// add point to sequence
-			cout<<"added: ("<<x<<", "<<y<<")\n";
+			cout<<"added: ("<<new_point.x<<", "<<new_point.y<<")\n";
 
-			CV_WRITE_SEQ_ELEM(cvPoint(x, y), *(data->writer));
+			CV_WRITE_SEQ_ELEM(cvPoint(new_point.x, new_point.y), *(data->writer));
 
 			cvCopy(temp_img, data->img);
 
@@ -763,6 +757,10 @@ IplImage *overlay_template(IplImage *src, CvPoint center) {
 				break;
 			case 'c': // invert image
 				invert = 1-invert;
+				break;
+			case 'r': // refresh window:
+				cvDestroyWindow("New Template");
+				cvNamedWindow("New Template", CV_WINDOW_AUTOSIZE);
 				break;
 		}
 

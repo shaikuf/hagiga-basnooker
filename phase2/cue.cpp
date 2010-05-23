@@ -14,36 +14,37 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 
 	if(isinf(cue_m)) { // perpendicular line
 		if(cue_cm.y < white_center.y)
-			theta = PI/2;
-		else
 			theta = 3*PI/2;
+		else
+			theta = PI/2;
 
 	} else { // non-perpendicular line
-		cue_m = fabs(cue_m);
+		theta = atan(cue_m);
+
 		if(cue_cm.x < white_center.x) {
 			if(cue_cm.y < white_center.y) {
 				// quarter 2
-				cue_m *= -1;
-				theta = PI + atan(cue_m);
+				theta = 2*PI - theta;
 			} else {
 				// quarter 3
-				theta = PI + atan(cue_m);
+				theta = 2*PI - theta;
 			}
 		} else {
 			if(cue_cm.y < white_center.y) {
 				// quarter 1
-				theta = atan(cue_m);
+				theta = PI - theta;
 			} else {
 				// quarter 4
-				cue_m *= -1;
-				theta = atan(cue_m) + 2*PI;
+				theta = PI - theta;
 			}
 		}
 	}
 
-	theta += PI;
+	theta = theta;
 	if(theta >= 2*PI)
 		theta -= 2*PI;
+	if(theta < 0)
+		theta += 2*PI;
 
 	return theta;
 }
@@ -57,6 +58,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		cvNamedWindow("gray");
 		cvNamedWindow("threshold");
 		cvNamedWindow("morphed");
+		cvNamedWindow("morphed-marked");
 		once = false;
 	}
 
@@ -69,10 +71,14 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	}
 
 	// paint the balls black so they wont be found
+	if(ball_centers[0].size() > 0) {
+		cvCircle(gray, ball_centers[0].front(),
+				1, cvScalar(0), BALL_DIAMETER);
+	}
 	for(int i=0; i<ball_centers_num; i++) {
 		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
 			cvCircle(gray, ball_centers[i][j],
-				1, cvScalar(0), BALL_DIAMETER);
+				1, cvScalar(0), BALL_DIAMETER/1);
 		}
 	}
 
@@ -86,6 +92,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 
 	// morphological operations:
 	IplImage *morph = cvCloneImage(thresh);
+	IplImage *morph_marked;
 
 		// remove small objects
 	cvErode(morph, morph, 0, CUE_OPENING_VAL);
@@ -97,6 +104,8 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 
 	if(CUE_FIND_DEBUG) {
 		cvShowImage("morphed", morph);
+		morph_marked = createBlankCopy(morph, 3);
+		cvSet(morph_marked, cvScalar(255, 255, 255), morph);
 	}
 
 	// find the contours
@@ -146,6 +155,10 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		// filter those outside the borders by far
 	centers = filterPointsOnTable(centers, CUE_BLOB_MAX_DIST_FROM_TABLE);
 
+	for(i=0; i<centers.size(); i++)
+		cvCircle(morph_marked, cvPoint(centers[i].x, centers[i].y), 1,
+					cvScalar(0, 255, 255), 3);
+
 	// find the points with best linear regression
 	double cue_n;
 	double cue_m;
@@ -171,13 +184,17 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	}
 
 	// paint debug image
-	if(CUE_FIND_DEBUG) {
+	if(CUE_FIND_DEBUG && cue_cm.x != -1) {
 		for(i=0; i < (int)real_centers.size(); i++) {
 			if(found_cue) {
 				cvCircle(src, cvPoint(real_centers[i].x, real_centers[i].y), 1,
-					cvScalar(0, 255, 0), 3);
+					cvScalar(255, 0, 0), 3);
+				cvCircle(morph_marked, cvPoint(real_centers[i].x, real_centers[i].y), 1,
+					cvScalar(255, 0, 0), 3);
 			} else {
 				cvCircle(src, cvPoint(real_centers[i].x, real_centers[i].y), 1,
+					cvScalar(0, 0, 255), 3);
+				cvCircle(morph_marked, cvPoint(real_centers[i].x, real_centers[i].y), 1,
 					cvScalar(0, 0, 255), 3);
 			}
 		}
@@ -188,12 +205,25 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		*theta = line2theta(cue_m, cue_cm, white_center);
 	}
 
+	if(CUE_FIND_DEBUG) {
+		if(cue_cm.x != -1) {
+			*theta = line2theta(cue_m, cue_cm, white_center);
+			int len = 350;
+			cvLine(morph_marked, cvPoint(cue_cm.x - len,cue_cm.y -len*cue_m), 
+				cvPoint(cue_cm.x + len,cue_cm.y + len*cue_m), cvScalar(0, 255, 0));
+			cout<<"angle = "<<*theta * 180/PI<<endl;
+		}
+
+		cvShowImage("morphed-marked", morph_marked);
+	}
+
 	// release stuff
 	cvReleaseMemStorage(&mem_storage);
 
 	cvReleaseImage(&gray);
 	cvReleaseImage(&thresh);
 	cvReleaseImage(&morph);
+	cvReleaseImage(&morph_marked);
 	cvReleaseImage(&temp);
 
 	return found_cue;

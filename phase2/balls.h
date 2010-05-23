@@ -6,9 +6,7 @@
 
 using namespace std;
 
-#define DEBUG_FIX_POS 0
-
-#define BALL_CORR_THD 0.85
+#define BALL_CORR_THD 0.75
 
 /* This finds the balls matching the given template on the image */
 vector<CvPoint> findBall(IplImage *img, IplImage *templ, int max_count,
@@ -16,5 +14,10 @@ vector<CvPoint> findBall(IplImage *img, IplImage *templ, int max_count,
 
 /* Fix an absolute position on the image, to a position relative to the table */
 CvPoint2D32f fixPosition(CvPoint center);
+
+/* This finds all the balls at once */
+void findBalls(IplImage *img, IplImage *ball_templates[],
+						 int ball_counts[], bool ball_inv_templ[],
+						 vector<CvPoint> ball_centers[], int n_balls);
 
 #endif

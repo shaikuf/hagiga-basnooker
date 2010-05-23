@@ -1,5 +1,6 @@
 #include "tcp_server.h"
 
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <errno.h>
+
+using namespace std;
 
 TCPServer::TCPServer(int port) {
 	// initialize the members
@@ -121,6 +124,8 @@ int TCPServer::update() {
 		} else if(retval == -1) { // error
 			if(WSAGetLastError() == WSAEWOULDBLOCK) {
 				// pass
+			} else if(WSAGetLastError() == 10054) { // closed
+				_client = 0;
 			} else {
 				printf("Error at recv(): %ld\n", WSAGetLastError());
 			}
@@ -140,8 +145,12 @@ void TCPServer::send_ball_pos(float x, float y, char prefix) {
 	char buf[128];
 	_snprintf_s(buf, 128, "%c%f,%f\n", prefix, x, y);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
-		printf("Error at send(): %ld\n", WSAGetLastError());
-		exit(1);
+		if(WSAGetLastError() == 10054) {
+			_client = 0;
+		} else {
+			printf("Error at send(): %ld\n", WSAGetLastError());
+			exit(1);
+		}
 	}
 }
 
@@ -152,8 +161,12 @@ void TCPServer::send_theta(double theta) {
 	char buf[128];
 	_snprintf_s(buf, 128, "%f\n", theta);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
-		printf("Error at send(): %ld\n", WSAGetLastError());
-		exit(1);
+		if(WSAGetLastError() == 10054) {
+			_client = 0;
+		} else {
+			printf("Error at send(): %ld\n", WSAGetLastError());
+			exit(1);
+		}
 	}
 }
 
@@ -164,7 +177,11 @@ void TCPServer::send_raw(char *str) {
 	char buf[128];
 	_snprintf_s(buf, 128, "%s", str);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
-		printf("Error at send(): %ld\n", WSAGetLastError());
-		exit(1);
+		if(WSAGetLastError() == 10054) {
+			_client = 0;
+		} else {
+			printf("Error at send(): %ld\n", WSAGetLastError());
+			exit(1);
+		}
 	}
 }

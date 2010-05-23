@@ -5,6 +5,7 @@
 #define FIND_CUE 1
 #define FIND_BALLS 1
 #define DRAW_BORDERS 1
+#define THETA_DOWNSAMPLE 1
 
 /* The main loop of the program */
 void gameLoop(CvSize resolution, int device_id);
