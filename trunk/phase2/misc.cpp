@@ -6,36 +6,6 @@
 
 using namespace std;
 
-void cvMatchTemplate2(IplImage *I, IplImage *T, IplImage *M, int foo) {
-	int x, y, x_tag, y_tag;
-	double val, Z_I, Z_T;
-	CvScalar s_I, s_T;
-
-	for(x=0; x <200; x++) {
-		for(y=0; y<200; y++) {
-			val = 0;
-			Z_I = 0;
-			Z_T = 0;
-			for(x_tag = 0; x_tag < T->width; x_tag++) {
-				for(y_tag = 0; y_tag < T->height; y_tag++) {
-					s_I = cvGet2D(I, y+y_tag, x+x_tag);
-					s_T = cvGet2D(T, y_tag, x_tag);
-					val = s_I.val[0]*s_T.val[0]*s_I.val[0]*s_T.val[0];
-					Z_I = s_I.val[0]*s_I.val[0];
-					Z_T = s_T.val[0]*s_T.val[0];
-				}
-			}
-			cvSet2D(M, y, x, cvScalar(val/pow(Z_I*Z_T, 0.5)));
-		}
-	}
-
-	for(; x<M->width; x++) {
-		for(; y<M->height; y++) {
-			cvSet2D(M, y, x, cvScalar(val/pow(Z_I*Z_T, 0.5)));
-		}
-	}
-}
-
 /* Finds the point which best matches the template */
 vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 							 int max_count, bool custom_norm) {
@@ -109,7 +79,7 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 		}
 
 		if(FIND_TEMPL_DEBUG)
-			cout<<"corr: "<<max_val<<endl;
+			cout<<"corr: "<<max_val<<" vs "<<corr_thd<<endl;
 
 		if(max_val < corr_thd) {
 			i = max_count;
@@ -123,7 +93,7 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 					cout<<"diff = "<<max_val-mean<<endl;
 				}
 
-				if(mean > 0.85) { // no black ball. not much variance
+				if(mean > corr_thd) { // no black ball. not much variance
 					i = max_count;
 					continue;
 				}
@@ -266,22 +236,27 @@ void paintHolesBlack(IplImage *img) {
 	CvSeq *borders = tableBorders();
 
 	// print the angles of the borders
+	// (0,0) (0,1), (1/2,-10/375), (1/2, 1+10/375), (1, 0), (1,1)
+
 	CvPoint p0 = *(CvPoint*)cvGetSeqElem(borders, 0); // top-left
 	CvPoint p1 = *(CvPoint*)cvGetSeqElem(borders, 1); // top-right
 	CvPoint p2 = *(CvPoint*)cvGetSeqElem(borders, 2); // bottom-right
 	CvPoint p3 = *(CvPoint*)cvGetSeqElem(borders, 3); // bottom-left
-	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2);
-	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2);
+	/*CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2);
+	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2);*/
+	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2-1/37.5);
+	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+1/37.5);
 
-	int delta = 5;
+	/*int delta = 5;
 	p0 = cvPoint(p0.x-delta, p0.y-delta);
 	p1 = cvPoint(p1.x+delta, p1.y-delta);
 	p2 = cvPoint(p2.x+delta, p2.y+delta);
 	p3 = cvPoint(p3.x-delta, p3.y+delta);
-	p4 = cvPoint(p4.x, p4.y-4.5*delta);
-	p5 = cvPoint(p5.x, p5.y+4.5*delta);
+	p4 = cvPoint(p4.x, (int)(p4.y-4.5*delta));
+	p5 = cvPoint(p5.x, (int)(p5.y+4.5*delta));*/
 
-	int size = 30;
+	//int size = 30;
+	int size = (p1.x - p0.x)*21/815;
 	cvCircle(img, p0, size, cvScalar(0), -1);
 	cvCircle(img, p1, size, cvScalar(0), -1);
 	cvCircle(img, p2, size, cvScalar(0), -1);
@@ -294,4 +269,39 @@ CvRect tableBordersBoundingRect() {
 	CvSeq *borders = tableBorders();
 
 	return cvBoundingRect(borders);
+}
+
+/* check if an image is changing over time */
+bool isMoving(IplImage *img) {
+	static IplImage *last_frame = 0;
+
+	if(last_frame == 0) {
+		last_frame = createBlankCopy(img, 1);
+		cvCvtColor(img, last_frame, CV_BGR2GRAY);
+		return false;
+	}
+
+	IplImage *img_gray = createBlankCopy(last_frame);
+	IplImage *diff = createBlankCopy(last_frame);
+	cvCvtColor(img, img_gray, CV_BGR2GRAY);
+	cvAbsDiff(img_gray, last_frame, diff);
+	cvThreshold(diff, diff, 10, 255, CV_THRESH_BINARY);
+
+	if(IS_MOVING_DEBUG) {
+		cvNamedWindow("Diff");
+		cvShowImage("Diff", diff);
+	}
+
+	cvCopy(img_gray, last_frame);
+
+	double max;
+	cvMinMaxLoc(diff, 0, &max, 0, 0);
+
+	return (max > 0);
+}
+
+/* l2 distance between points */
+double dist(CvPoint p1, CvPoint p2) {
+	return pow((p1.x - p2.x)*(p1.x - p2.x) +
+		(p1.y - p2.y)*(p1.y - p2.y), 0.5);
 }

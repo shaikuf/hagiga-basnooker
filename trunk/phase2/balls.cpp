@@ -53,7 +53,7 @@ CvPoint2D32f fixPosition(CvPoint center) {
 /* This finds all the balls at once */
 void findBalls(IplImage *img, IplImage *ball_templates[],
 						 int ball_counts[], bool ball_inv_templ[],
-						 vector<CvPoint> ball_centers[],
+						 double ball_thds[], vector<CvPoint> ball_centers[],
 						 int n_balls) {
 
 	IplImage *img_copy = cvCloneImage(img);
@@ -74,19 +74,19 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 		if(FIND_TEMPL_DEBUG)
 			cout<<"Finding "<<i<<endl;
 		if(ball_inv_templ[i]) {
-			p = findTemplate(img_inv_copy, ball_templates[i], BALL_CORR_THD, ball_counts[i], true);
+			p = findTemplate(img_inv_copy, ball_templates[i], ball_thds[i], ball_counts[i], true);
 		} else {
-			p = findTemplate(img_copy, ball_templates[i], BALL_CORR_THD, ball_counts[i]);
+			p = findTemplate(img_copy, ball_templates[i], ball_thds[i], ball_counts[i]);
 		}
 
 		// paint the found balls black
-		for(int j=0; j<p.size(); j++) {
+		for(unsigned int j=0; j<p.size(); j++) {
 			cvCircle(img_copy, p[j], 1, cvScalar(0), BALL_DIAMETER*3/4);
 			cvCircle(img_inv_copy, p[j], 1, cvScalar(0), BALL_DIAMETER*3/4);
 		}
 
 		// set on the results array
-		for(int j=0; j<p.size(); j++) {
+		for(unsigned int j=0; j<p.size(); j++) {
 			p[j].x += tableBordersBoundingRect().x;
 			p[j].y += tableBordersBoundingRect().y;
 		}

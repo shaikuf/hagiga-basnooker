@@ -15,4 +15,5 @@ public:
 	void send_ball_pos(float x, float y, char prefix);
 	void send_theta(double theta);
 	void send_raw(char *str);
+	void send_refetch();
 };

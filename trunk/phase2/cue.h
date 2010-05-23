@@ -15,6 +15,8 @@ using namespace std;
 #define CUE_CLOSING_VAL 4
 #define CUE_BLOB_MAX_SIZE 100
 #define CUE_BLOB_MAX_DIST_FROM_TABLE 0
+#define CUE_SMOOTH_WINDOWS 2500000 // times 100 ns -- 250ms
+#define CUE_THETA_DOWNSAMPLE 1
 
 /* Convert the line from center of mass and slope to theta */
 double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center);
@@ -23,5 +25,7 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center);
 bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 							 vector<CvPoint> *ball_centers, int ball_centers_num);
 
+/* This keeps the last thetas and smooths the samples of it */
+double smoothTheta(double new_theta);
 
 #endif
