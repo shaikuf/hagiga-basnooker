@@ -5,6 +5,7 @@
 #include "misc.h"
 #include <vector>
 #include "linear.h"
+#include "windows.h"
 
 using namespace std;
 
@@ -155,8 +156,8 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		// filter those outside the borders by far
 	centers = filterPointsOnTable(centers, CUE_BLOB_MAX_DIST_FROM_TABLE);
 
-	for(i=0; i<centers.size(); i++)
-		cvCircle(morph_marked, cvPoint(centers[i].x, centers[i].y), 1,
+	for(unsigned i=0; i<centers.size(); i++)
+		cvCircle(morph_marked, cvPoint((int)centers[i].x, (int)centers[i].y), 1,
 					cvScalar(0, 255, 255), 3);
 
 	// find the points with best linear regression
@@ -209,8 +210,10 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		if(cue_cm.x != -1) {
 			*theta = line2theta(cue_m, cue_cm, white_center);
 			int len = 350;
-			cvLine(morph_marked, cvPoint(cue_cm.x - len,cue_cm.y -len*cue_m), 
-				cvPoint(cue_cm.x + len,cue_cm.y + len*cue_m), cvScalar(0, 255, 0));
+			cvLine(morph_marked,
+				cvPoint((int)(cue_cm.x - len), (int)(cue_cm.y -len*cue_m)),
+				cvPoint((int)(cue_cm.x + len), (int)(cue_cm.y + len*cue_m)),
+				cvScalar(0, 255, 0));
 			cout<<"angle = "<<*theta * 180/PI<<endl;
 		}
 
@@ -229,3 +232,33 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	return found_cue;
 }
 
+/* This keeps the last thetas and smooths the samples of it */
+double smoothTheta(double new_theta) {
+	static bool once;
+
+	FILETIME now;
+	GetSystemTimeAsFileTime(&now);
+	__int64 now_i = ((__int64)now.dwHighDateTime << 32) + now.dwLowDateTime;
+
+	typedef pair<double, __int64> theta_time;
+	static vector<theta_time> last_samples;
+
+	// filter old thetas
+	vector<theta_time>::iterator itr = last_samples.begin();
+	while(last_samples.size() > 0) {
+		if(now_i - (__int64)(itr->second) > CUE_SMOOTH_WINDOWS)
+			last_samples.erase(itr);
+		else
+			break;
+	}
+
+	// insert the new theta
+	last_samples.push_back(theta_time(new_theta, now_i));
+
+	// calculate the current theta
+	double mean_theta = 0;
+	for(itr = last_samples.begin(); itr != last_samples.end(); itr++)
+		mean_theta += itr->first;
+
+	return mean_theta/last_samples.size();
+}

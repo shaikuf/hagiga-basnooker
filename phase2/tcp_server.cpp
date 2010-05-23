@@ -154,6 +154,22 @@ void TCPServer::send_ball_pos(float x, float y, char prefix) {
 	}
 }
 
+void TCPServer::send_refetch() {
+	if(_client == 0)
+		return;
+
+	char buf[128];
+	_snprintf_s(buf, 128, "refetch\n");
+	if(send(_client, buf, strlen(buf), 0) == -1) {
+		if(WSAGetLastError() == 10054) {
+			_client = 0;
+		} else {
+			printf("Error at send(): %ld\n", WSAGetLastError());
+			exit(1);
+		}
+	}
+}
+
 void TCPServer::send_theta(double theta) {
 	if(_client == 0)
 		return;

@@ -9,11 +9,15 @@ using namespace std;
 
 #define PI 3.14159265
 
-#define FIND_TEMPL_DEBUG 1
+#define FIND_TEMPL_DEBUG 0
 
 #define USE_BIRDS_EYE 1
 
 #define BALL_DIAMETER 30
+
+#define IS_MOVING_DEBUG 0
+#define IS_MOVING_WINDOW 10000000 // times 100 ns -- 1 sec
+#define IS_MOVING_WHITE_DIST 5
 
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */
@@ -54,5 +58,11 @@ inline bool isinf(T value) {
 	return std::numeric_limits<T>::has_infinity &&
 		value == std::numeric_limits<T>::infinity();
 }
+
+/* check if an image is changing over time */
+bool isMoving(IplImage *img);
+
+/* l2 distance between points */
+double dist(CvPoint p1, CvPoint p2);
 
 #endif
