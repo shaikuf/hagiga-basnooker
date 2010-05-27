@@ -246,10 +246,12 @@ double smoothTheta(double new_theta) {
 	// filter old thetas
 	vector<theta_time>::iterator itr = last_samples.begin();
 	while(last_samples.size() > 0) {
-		if(now_i - (__int64)(itr->second) > CUE_SMOOTH_WINDOWS)
+		if(now_i - (__int64)(itr->second) > CUE_SMOOTH_WINDOWS) {
 			last_samples.erase(itr);
-		else
+			itr = last_samples.begin();
+		} else {
 			break;
+		}
 	}
 
 	// insert the new theta

@@ -175,7 +175,7 @@ void TCPServer::send_theta(double theta) {
 		return;
 
 	char buf[128];
-	_snprintf_s(buf, 128, "%f\n", theta);
+	_snprintf_s(buf, 128, "t%f\n", theta);
 	if(send(_client, buf, strlen(buf), 0) == -1) {
 		if(WSAGetLastError() == 10054) {
 			_client = 0;

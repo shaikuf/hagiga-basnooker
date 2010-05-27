@@ -18,7 +18,7 @@ IplImage *overlay_template(IplImage *src, CvPoint center);
 void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient);
 
 /* this lets the user mark the edges of the projection area */
-void learn_edges(CvSize resolution, int device_id);
+void learn_edges(bool calibrate, CvSize resolution, int device_id);
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param);
 
 /* this lets the user watch the camera image fixed using the matrices */
@@ -26,6 +26,9 @@ void watch(CvSize resolution, bool with_birds_eye, int device_id);
 
 /* this fixes the mouse coordinates according to the image resolution */
 void fixCoordinates(int &x, int &y, CvSize resolution);
+
+/* this creates the birds-eye matrix from the edges of the projection image */
+void calibrationFromEdges(CvSeq *edges, CvSize resolution, int device_id);
 
 /* this is used to pass more parameters the the mouse callback functions */
 struct seq_data {
