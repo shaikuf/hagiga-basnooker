@@ -178,6 +178,7 @@ void calibration(int board_w, int board_h, int n_boards, float square_width,
 /* this handles generation of perspective wrapping matrix */
 void birds_eye(int board_w, int board_h, float square_width, float square_height,
 			   CvSize resolution, int device_id) {
+
 	// INPUT PARAMETERS:
 	//
 	int board_n = board_w * board_h;
@@ -503,7 +504,7 @@ void saveTemplateAroundMouse(int event, int x, int y, int flags, void *param) {
 }
 
 /* this lets the user mark the edges of the projection area */
-void learn_edges(CvSize resolution, int device_id) {
+void learn_edges(bool calibrate, CvSize resolution, int device_id) {
 	// init camera
 	VideoCapture capture(0, resolution.width, resolution.height);
 	IplImage *pre_image = capture.CreateCaptureImage();
@@ -514,11 +515,20 @@ void learn_edges(CvSize resolution, int device_id) {
 	// load data from files
 	char filename[100];
 	_snprintf_s(filename, 100, "H-%d.xml", device_id);
-	CvMat* H = (CvMat*)cvLoad(filename);
 
 	capture.waitFrame(pre_image); // capture frame
-	cvWarpPerspective(pre_image, image,	H,
-		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+	if(!calibrate) {
+		CvMat* H = (CvMat*)cvLoad(filename);
+
+		cvWarpPerspective(pre_image, image,	H,
+			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+
+		cvReleaseMat(&H);
+	} else {
+		cvCopy(pre_image, image);
+	}
+
+	cvReleaseImage(&pre_image);
 
 	cvShowImage("Edges Marker", image);
 
@@ -537,19 +547,22 @@ void learn_edges(CvSize resolution, int device_id) {
 	cvSetMouseCallback("Edges Marker", &edgePointAroundMouse, &data);
 	char c=cvWaitKey(0);
 
-	// save borders
 	CvSeq* edges = cvEndWriteSeq(&writer);
-
-	_snprintf_s(filename, 100, "edges-%d.xml", device_id);
-	cvSave(filename, edges);
 
 	// release stuff
 	capture.stop();
 	cvDestroyWindow("Edges Marker");
 
-	cvReleaseMat(&H);
+	if(calibrate) {
+		// save the birds-eye matrix
+		calibrationFromEdges(edges, resolution, device_id);
+	}
+
+	// save borders
+	_snprintf_s(filename, 100, "edges-%d.xml", device_id);
+	cvSave(filename, edges);
+
 	cvReleaseImage(&image);
-	cvReleaseImage(&pre_image);
 }
 
 void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
@@ -559,13 +572,26 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 
 	static CvPoint new_point;
 	static IplImage *temp_img = createBlankCopy(data->img);
-	static int confirming = 0;
 
-	// pretty much the same as borders marking
+	if(event == CV_EVENT_LBUTTONUP) {
+		new_point = cvPoint(x,y);		
 
-	if(!confirming) {
-		if(event == CV_EVENT_LBUTTONUP) {
-			new_point = cvPoint(x,y);		
+		char key = 0;
+		do {
+			switch(key) {
+				case 'i':
+					new_point.y -= 1;
+					break;
+				case 'k':
+					new_point.y += 1;
+					break;
+				case 'j':
+					new_point.x -= 1;
+					break;
+				case 'l':
+					new_point.x += 1;
+					break;
+			}
 
 			// draw new image
 			cvCopy(data->img, temp_img);
@@ -573,23 +599,17 @@ void edgePointAroundMouse(int event, int x, int y, int flags, void *param) {
 
 			cvShowImage("Edges Marker", temp_img);
 
-			confirming = 1;
-		}
-	} else {
-		if(event == CV_EVENT_LBUTTONUP) {
-			// add point to sequence
-			cout<<"added: ("<<new_point.x<<", "<<new_point.y<<")\n";
+			key = cvWaitKey();
+		} while(key != 27);
 
-			CV_WRITE_SEQ_ELEM(cvPoint(new_point.x, new_point.y), *(data->writer));
+		// draw final image
+		cvCircle(data->img, new_point, 1, cvScalar(0, 255, 0), 2);
 
-			cvCopy(temp_img, data->img);
+		// add point to sequence
+		cout<<"added: ("<<new_point.x<<", "<<new_point.y<<")\n";
+		CV_WRITE_SEQ_ELEM(cvPoint(new_point.x, new_point.y), *(data->writer));
 
-			confirming = 0;
-		} else if(event == CV_EVENT_RBUTTONUP) {
-			cvShowImage("Edges Marker", data->img);
-
-			confirming = 0;
-		}
+		cvShowImage("Edges Marker", data->img);
 	}
 }
 
@@ -863,4 +883,219 @@ void setOverlay(IplImage *overlay, int d_width, int d_height, int gradient) {
 		int color = (int)((gradient-j+1)*(255/(gradient+1.)));
 		cvEllipseBox(overlay, bounding, cvScalar(color,color,color), 1);
 	}
+}
+
+/* this creates the birds-eye matrix from the edges of the projection image */
+void calibrationFromEdges(CvSeq *edges, CvSize resolution, int device_id) {
+	float scale = (float)0.10;
+
+	int board_w = 2;
+	int board_h = 2;
+	int board_n = board_w * board_h;
+
+	IplImage* image = 0;
+
+	// CAPTURE IMAGE
+	//
+	VideoCapture capture(device_id,resolution.width,resolution.height);
+	image = capture.CreateCaptureImage();
+
+	capture.waitFrame(image);
+	
+	capture.stop();
+
+	cvNamedWindow("Original");
+	cvShowImage("Original", image);
+	
+	//SET THE IMAGE AND OBJECT POINTS:
+	//
+	int num_of_points = board_n;
+	CvMat *objPts = cvCreateMat(2, 4, CV_32F);
+	CvMat *imgPts = cvCreateMat(2, 4, CV_32F);
+
+		// obj pts
+	CV_MAT_ELEM(*objPts, float, 0, 0) = scale*0;
+	CV_MAT_ELEM(*objPts, float, 1, 0) = scale*0;
+
+	CV_MAT_ELEM(*objPts, float, 0, 1) = scale*820;
+	CV_MAT_ELEM(*objPts, float, 1, 1) = scale*0;
+
+	CV_MAT_ELEM(*objPts, float, 0, 2) = scale*820;
+	CV_MAT_ELEM(*objPts, float, 1, 2) = scale*375;
+
+	CV_MAT_ELEM(*objPts, float, 0, 3) = scale*0;
+	CV_MAT_ELEM(*objPts, float, 1, 3) = scale*375;
+
+		// img pts
+	CV_MAT_ELEM(*imgPts, float, 0, 0) =
+		(float)((CvPoint*)cvGetSeqElem(edges,0))->x;
+	CV_MAT_ELEM(*imgPts, float, 1, 0) = 
+		(float)((CvPoint*)cvGetSeqElem(edges, 0))->y;
+
+	CV_MAT_ELEM(*imgPts, float, 0, 1) = 
+		(float)((CvPoint*)cvGetSeqElem(edges, 1))->x;
+	CV_MAT_ELEM(*imgPts, float, 1, 1) = 
+		(float)((CvPoint*)cvGetSeqElem(edges, 1))->y;
+
+	CV_MAT_ELEM(*imgPts, float, 0, 2) = 
+		(float)((CvPoint*)cvGetSeqElem(edges, 2))->x;
+	CV_MAT_ELEM(*imgPts, float, 1, 2) = 
+		(float)((CvPoint*)cvGetSeqElem(edges, 2))->y;
+
+	CV_MAT_ELEM(*imgPts, float, 0, 3) = 
+		(float)((CvPoint*)cvGetSeqElem(edges, 3))->x;
+	CV_MAT_ELEM(*imgPts, float, 1, 3) = 
+		(float)((CvPoint*)cvGetSeqElem(edges, 3))->y;
+
+	// FIND THE HOMOGRAPHY
+	//
+	CvMat *H = cvCreateMat( 3, 3, CV_32F);
+	cvFindHomography(objPts, imgPts, H);
+
+	// LET THE USER ADJUST THE Z HEIGHT OF THE VIEW
+	//
+	float Z = 1;
+	int key = 0;
+	IplImage *birds_image = cvCloneImage(image);
+	cvNamedWindow("Birds_Eye");
+
+	// LOOP TO ALLOW USER TO PLAY WITH HEIGHT:
+	//
+	// escape key stops
+	//
+	while(key != 27) {
+		// Set the height
+		//
+		CV_MAT_ELEM(*H,float,2,2) = Z;
+		// COMPUTE THE FRONTAL PARALLEL OR BIRD'S-EYE VIEW:
+		// USING HOMOGRAPHY TO REMAP THE VIEW
+		//
+		cvWarpPerspective(
+			image,
+			birds_image,
+			H,
+			CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS
+		);
+		cvShowImage( "Birds_Eye", birds_image );
+
+		float z_delta = 0.5;
+		float theta_delta = (float)(0.02*PI/180);
+		int movement_delta = 25;
+		CvPoint2D32f tmp;
+		key = cvWaitKey();
+		switch(key) {
+			case 'u': // up on the Z axis
+				Z += z_delta;
+				break;
+			case 'd': // down on the Z axis
+				Z -= z_delta;
+				break;
+			case 'i': // up on X-Y
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 1, i) += movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'j': // left on X-Y
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 0, i) += movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'k': // down on X-Y
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 1, i) -= movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'l': // right on X-Y
+				for(int i=0; i<num_of_points; i++)
+					CV_MAT_ELEM(*objPts, float, 0, i) -= movement_delta;
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 't': // flip horizontally
+				for(int i=0; i<board_h; i++) {
+					for(int j=0; j<board_w/2; j++) {
+						tmp.x = CV_MAT_ELEM(*objPts, float, 0, j*board_w+i);
+						tmp.y = CV_MAT_ELEM(*objPts, float, 1, j*board_w+i);
+
+						CV_MAT_ELEM(*objPts, float, 0, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 0, j*(board_w+1)-i-1);
+						CV_MAT_ELEM(*objPts, float, 1, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 1, j*(board_w+1)-i-1);
+
+						CV_MAT_ELEM(*objPts, float, 0, j*(board_w+1)-i-1) = tmp.x;
+						CV_MAT_ELEM(*objPts, float, 1, j*(board_w+1)-i-1) = tmp.y;
+					}
+				}
+				break;
+			case 'y': // flip vertically
+				for(int j=0; j<board_w; j++) {
+					for(int i=0; i<board_h/2; i++) {
+						tmp.x = CV_MAT_ELEM(*objPts, float, 0, j*board_w+i);
+						tmp.y = CV_MAT_ELEM(*objPts, float, 1, j*board_w+i);
+
+						CV_MAT_ELEM(*objPts, float, 0, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 0, (board_h-j-1)*board_w+i);
+						CV_MAT_ELEM(*objPts, float, 1, j*board_w+i) = \
+							CV_MAT_ELEM(*objPts, float, 1, (board_h-j-1)*board_w+i);
+
+						CV_MAT_ELEM(*objPts, float, 0, (board_h-j-1)*board_w+i) = tmp.x;
+						CV_MAT_ELEM(*objPts, float, 1, (board_h-j-1)*board_w+i) = tmp.y;
+					}
+				}
+				break;
+			case 'o':
+				// rotate clockwise
+				for(int i=0; i<num_of_points; i++) {
+					tmp.x = CV_MAT_ELEM(*objPts, float, 0, i);
+					tmp.y = CV_MAT_ELEM(*objPts, float, 1, i);
+					CV_MAT_ELEM(*objPts, float, 0, i) = tmp.x*cos(theta_delta)\
+						- tmp.y*sin(theta_delta);
+					CV_MAT_ELEM(*objPts, float, 1, i) = tmp.x*sin(theta_delta)\
+						+ tmp.y*cos(theta_delta);
+				}
+				cvFindHomography(objPts, imgPts, H);
+				break;
+			case 'p':
+				// rotate counter-clockwise
+				for(int i=0; i<num_of_points; i++) {
+					tmp.x = CV_MAT_ELEM(*objPts, float, 0, i);
+					tmp.y = CV_MAT_ELEM(*objPts, float, 1, i);
+					CV_MAT_ELEM(*objPts, float, 0, i) = tmp.x*cos(-1*theta_delta)\
+						- tmp.y*sin(-1*theta_delta);
+					CV_MAT_ELEM(*objPts, float, 1, i) = tmp.x*sin(-1*theta_delta)\
+						+ tmp.y*cos(-1*theta_delta);
+				}
+				cvFindHomography(objPts, imgPts, H);
+				break;
+		}
+	}
+
+	char filename[100];
+	//_snprintf_s(filename, 100, "H-edges-%d.xml", device_id);
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	cvSave(filename,H); //We can reuse H for the same camera mounting
+
+	// recalculate the edges using the transform
+	/*CvMat *imgPtsTrans = cvCreateMat(2, 4, CV_32F);
+
+	cvTransform(imgPts, imgPtsTrans, H);
+
+	((CvPoint*)cvGetSeqElem(edges, 0))->x =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 0, 0);
+	((CvPoint*)cvGetSeqElem(edges, 0))->y =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 1, 0);
+
+	((CvPoint*)cvGetSeqElem(edges, 1))->x =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 0, 1);
+	((CvPoint*)cvGetSeqElem(edges, 1))->y =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 1, 1);
+
+	((CvPoint*)cvGetSeqElem(edges, 2))->x =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 0, 2);
+	((CvPoint*)cvGetSeqElem(edges, 2))->y =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 1, 2);
+
+	((CvPoint*)cvGetSeqElem(edges, 3))->x =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 0, 3);
+	((CvPoint*)cvGetSeqElem(edges, 3))->y =
+		(int)CV_MAT_ELEM(*imgPtsTrans, float, 1, 3);*/
 }

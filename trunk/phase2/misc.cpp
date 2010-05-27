@@ -6,119 +6,6 @@
 
 using namespace std;
 
-/* Finds the point which best matches the template */
-vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
-							 int max_count, bool custom_norm) {
-
-	if(custom_norm) {
-		IplImage *I_gray = createBlankCopy(img, 1);
-		IplImage *T_gray = createBlankCopy(templ, 1);
-		cvCvtColor(img, I_gray, CV_BGR2GRAY);
-		cvCvtColor(templ, T_gray, CV_BGR2GRAY);
-		img = I_gray;
-		templ = T_gray;
-	}
-
-	CvSize img_s = cvGetSize(img);
-	CvSize templ_s = cvGetSize(templ);
-
-	// create an image the size the correlation function return
-	IplImage *match = cvCreateImage(cvSize(img_s.width - templ_s.width + 1,
-		img_s.height - templ_s.height + 1), IPL_DEPTH_32F, 1);
-
-	// get the correlation image
-	if(!custom_norm) {
-		cvMatchTemplate(img, templ, match, CV_TM_CCORR_NORMED);
-	} else {
-		cvMatchTemplate(img, templ, match, CV_TM_CCORR);
-		
-		// limit the image above 0
-		IplImage *limit_mask = cvCreateImage(cvSize(img_s.width - templ_s.width + 1,
-			img_s.height - templ_s.height + 1), IPL_DEPTH_8U, 1);
-		cvCmpS(match, 0, limit_mask, CV_CMP_LT);
-		cvSet(match, cvScalar(0), limit_mask);
-		cvReleaseImage(&limit_mask);
-
-		// shift and scale
-		double tmp_max, tmp_min;
-		cvMinMaxLoc(match, &tmp_min, &tmp_max, 0, 0, 0);
-		cvAddS(match, cvScalar(-1*tmp_min), match);
-		cvConvertScale(match, match, 1/(tmp_max-tmp_min), 0);
-	}
-
-	if(FIND_TEMPL_DEBUG) {
-		cvNamedWindow("Original Image", CV_WINDOW_AUTOSIZE);
-		cvShowImage("Original Image", img);
-	}
-
-	vector<CvPoint> res;
-
-	// find the maximal correlation
-	for(int i = 0; i < max_count; i++) {
-		CvPoint max_p;
-		double max_val;
-		cvMinMaxLoc(match, 0, &max_val, 0, &max_p, 0);
-
-		if(FIND_TEMPL_DEBUG) {
-			cvNamedWindow("Template", CV_WINDOW_AUTOSIZE);
-			cvShowImage("Template", templ);
-			
-			// paint the corr. and the circle on match_draw
-			IplImage *match_draw = createBlankCopy(match, 3);
-			cvCvtColor(match, match_draw, CV_GRAY2BGR);
-			cvCircle(match_draw, max_p, 1, cvScalar(0xff, 0), 2);
-
-			cvNamedWindow("Template matching", CV_WINDOW_AUTOSIZE);
-			cvShowImage("Template matching", match_draw);
-			cvWaitKey(0);
-			cvDestroyWindow("Template matching");
-			cvDestroyWindow("Template");
-			cvDestroyWindow("Original Image");
-
-			cvReleaseImage(&match_draw);
-		}
-
-		if(FIND_TEMPL_DEBUG)
-			cout<<"corr: "<<max_val<<" vs "<<corr_thd<<endl;
-
-		if(max_val < corr_thd) {
-			i = max_count;
-		} else {
-			if(custom_norm) {
-				double mean = cvAvg(match).val[0];
-				
-				if(FIND_TEMPL_DEBUG) {
-					cout<<"max = "<<max_val<<endl;
-					cout<<"mean = "<<mean<<endl;
-					cout<<"diff = "<<max_val-mean<<endl;
-				}
-
-				if(mean > corr_thd) { // no black ball. not much variance
-					i = max_count;
-					continue;
-				}
-			}
-			
-			cvCircle(match, max_p, 1, cvScalar(0), BALL_DIAMETER);
-
-			// fix the position of the maximal correlation to be the middle of the
-			// template
-			max_p.x = max_p.x + (templ->width)/2;
-			max_p.y = max_p.y + (templ->height)/2;
-			
-			res.push_back(max_p);
-		}
-	}
-
-	cvReleaseImage(&match);
-	if(custom_norm) {
-		cvReleaseImage(&img);
-		cvReleaseImage(&templ);
-	}
-
-	return res;
-}
-
 /* This returns a sequence of CvPoints specifying the contour of the
 board borders */
 CvSeq *tableBorders() {
@@ -244,8 +131,9 @@ void paintHolesBlack(IplImage *img) {
 	CvPoint p3 = *(CvPoint*)cvGetSeqElem(borders, 3); // bottom-left
 	/*CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2);
 	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2);*/
-	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2-1/37.5);
-	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+1/37.5);
+	int y_delta = (int)((p2.y-p1.y)*1/37.5);
+	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2-y_delta);
+	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+y_delta);
 
 	/*int delta = 5;
 	p0 = cvPoint(p0.x-delta, p0.y-delta);
@@ -268,7 +156,9 @@ void paintHolesBlack(IplImage *img) {
 CvRect tableBordersBoundingRect() {
 	CvSeq *borders = tableBorders();
 
-	return cvBoundingRect(borders);
+	CvRect bound = cvBoundingRect(borders);
+	return cvRect(bound.x-BOUNDING_RECT_OFFSET, bound.y-BOUNDING_RECT_OFFSET,
+		bound.width+BOUNDING_RECT_OFFSET, bound.height+BOUNDING_RECT_OFFSET);
 }
 
 /* check if an image is changing over time */

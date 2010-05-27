@@ -9,8 +9,6 @@ using namespace std;
 
 #define PI 3.14159265
 
-#define FIND_TEMPL_DEBUG 0
-
 #define USE_BIRDS_EYE 1
 
 #define BALL_DIAMETER 30
@@ -18,14 +16,11 @@ using namespace std;
 #define IS_MOVING_DEBUG 0
 #define IS_MOVING_WINDOW 10000000 // times 100 ns -- 1 sec
 #define IS_MOVING_WHITE_DIST 5
+#define BOUNDING_RECT_OFFSET 5
 
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */
 IplImage *createBlankCopy(IplImage *src, int channels = -1, int depth = -1);
-
-/* Finds the point which best matches the template */
-vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
-							 int max_count, bool custom_norm = false);
 
 /* This returns a sequence of CvPoints specifying the contour of the
 board borders */

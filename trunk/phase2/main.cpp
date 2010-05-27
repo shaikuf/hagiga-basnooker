@@ -33,7 +33,8 @@ int main(int argc, char* argv[])
 		calibration(5, 3, 12, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
-		birds_eye(12, 8, 5.8f, 5.8f, resolution, 0);
+		learn_edges(false, resolution, 0);
+		//birds_eye(12, 8, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 0) {
 		// main loop
 		gameLoop(resolution, 0);
@@ -42,7 +43,7 @@ int main(int argc, char* argv[])
 		grab_templates(resolution, 0);
 	} else if(mode == 4) {
 		// learn edges
-		learn_edges(resolution, 0);
+		learn_edges(false, resolution, 0);
 	} else if(mode == -1) {
 		// watch with corrections
 		watch(resolution, true, 0);
@@ -69,8 +70,8 @@ void gameLoop(CvSize resolution, int device_id) {
 		cvScalar(255, 255, 0), cvScalar(255, 0, 0), cvScalar(255, 0, 255),
 		cvScalar(255, 180, 105), cvScalar(0, 255, 255), 
 		cvScalar(255, 255, 255)};
-	int ball_counts[8] = {1, 2, 20, 1, 1, 1, 1, 1};
-	double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.7, 0.7, 0.75, 0.85};
+	int ball_counts[8] = {1, 1, 15, 1, 1, 1, 1, 1};
+	double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.75, 0.7, 0.85, 0.17};
 	bool ball_inv_templ[8] = {false, false, false, false, false, false, false,
 		true};
 	char ball_tcp_prefix[8] = {'w', 'p', 'r', 'y', 'g', 'o', 'l', 'b'};
@@ -168,7 +169,8 @@ void gameLoop(CvSize resolution, int device_id) {
 				found_cue = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
 					ball_centers, NUM_BALLS);
 
-				theta = smoothTheta(theta);
+				if(found_cue)
+					theta = smoothTheta(theta);
 
 				theta_sending_i = (theta_sending_i+1)%CUE_THETA_DOWNSAMPLE;
 				if(found_cue && theta_sending_i == 0) { // we found the cue
