@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "params.h"
+
 using namespace std;
 
 /* this finds points which reside on a line with some R^2 coefficient, and the
@@ -30,7 +32,7 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 	linearRegression(d_points, &m_a, &m_b, &m_coeff);
 
 	// while it's not good enought and we have enough points
-	while(m_coeff < min_coeff && d_points.size() >= 2) {
+	while(m_coeff < min_coeff && d_points.size() >= CUE_MIN_BLOBS) {
 		// find the furthest point
 		vector<CvPoint2D32f>::iterator max_iter = d_points.begin();
 		double max_dist = distFromLine(max_iter->x, max_iter->y, m_a, m_b);

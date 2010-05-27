@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 		calibration(5, 3, 12, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 1) {
 		// calibrate viewpoint
-		learn_edges(false, resolution, 0);
+		learn_edges(true, resolution, 0);
 		//birds_eye(12, 8, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 0) {
 		// main loop

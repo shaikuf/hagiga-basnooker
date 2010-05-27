@@ -1,4 +1,8 @@
+#ifndef _TCP_SERVER_H
+#define _TCP_SERVER_H
+
 #include <sys/types.h>
+#include "params.h"
 
 class TCPServer {
 	int _listener;
@@ -7,7 +11,7 @@ class TCPServer {
 	int _port;
 
 public:
-	TCPServer(int port = 1234);
+	TCPServer(int port = PORT);
 	~TCPServer();
 
 	int update();
@@ -17,3 +21,5 @@ public:
 	void send_raw(char *str);
 	void send_refetch();
 };
+
+#endif

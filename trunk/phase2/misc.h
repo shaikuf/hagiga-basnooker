@@ -4,19 +4,11 @@
 #include <cv.h>
 #include <limits>
 #include <vector>
+#include "params.h"
 
 using namespace std;
 
 #define PI 3.14159265
-
-#define USE_BIRDS_EYE 1
-
-#define BALL_DIAMETER 30
-
-#define IS_MOVING_DEBUG 0
-#define IS_MOVING_WINDOW 10000000 // times 100 ns -- 1 sec
-#define IS_MOVING_WHITE_DIST 5
-#define BOUNDING_RECT_OFFSET 5
 
 /* Create a new IplImage, the same size of src. If channels is -1, it's also
 the same number of channels. The same for depth. */

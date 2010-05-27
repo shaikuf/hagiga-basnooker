@@ -129,21 +129,13 @@ void paintHolesBlack(IplImage *img) {
 	CvPoint p1 = *(CvPoint*)cvGetSeqElem(borders, 1); // top-right
 	CvPoint p2 = *(CvPoint*)cvGetSeqElem(borders, 2); // bottom-right
 	CvPoint p3 = *(CvPoint*)cvGetSeqElem(borders, 3); // bottom-left
-	/*CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2);
-	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2);*/
+
 	int y_delta = (int)((p2.y-p1.y)*1/37.5);
 	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2-y_delta);
+		// top-center
 	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+y_delta);
+		// bottom-center
 
-	/*int delta = 5;
-	p0 = cvPoint(p0.x-delta, p0.y-delta);
-	p1 = cvPoint(p1.x+delta, p1.y-delta);
-	p2 = cvPoint(p2.x+delta, p2.y+delta);
-	p3 = cvPoint(p3.x-delta, p3.y+delta);
-	p4 = cvPoint(p4.x, (int)(p4.y-4.5*delta));
-	p5 = cvPoint(p5.x, (int)(p5.y+4.5*delta));*/
-
-	//int size = 30;
 	int size = (p1.x - p0.x)*21/815;
 	cvCircle(img, p0, size, cvScalar(0), -1);
 	cvCircle(img, p1, size, cvScalar(0), -1);
@@ -186,6 +178,9 @@ bool isMoving(IplImage *img) {
 
 	double max;
 	cvMinMaxLoc(diff, 0, &max, 0, 0);
+
+	cvReleaseImage(&img_gray);
+	cvReleaseImage(&diff);
 
 	return (max > 0);
 }
