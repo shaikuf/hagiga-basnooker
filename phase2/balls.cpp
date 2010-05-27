@@ -7,7 +7,11 @@
 
 using namespace std;
 
-/* Fix an absolute position on the image, to a position relative to the table */
+/*	Fix an absolute position on the image, to a position relative to the table.
+	Gets:
+		(CvPoint)center		a point in the image
+	Returns:
+		(CvPoint)			a point on the table with 0<=X,Y<=1 */
 CvPoint2D32f fixPosition(CvPoint center) {
 	
 	// read the edges calibration file
@@ -25,6 +29,9 @@ CvPoint2D32f fixPosition(CvPoint center) {
 	cvReleaseMemStorage(&mem);
 
 	// fix the position
+	/* this works by assuming that the points are the edges of a rectangle
+	(is a good approximation) and computes the relative X-Y inside this
+	rectangle */
 
 	CvPoint2D32f res;
 
@@ -44,35 +51,60 @@ CvPoint2D32f fixPosition(CvPoint center) {
 	double A = L*cos(alpha-theta);
 	double B = L*sin(alpha-theta);
 
+	// fix
 	res.x = (float)(A/X);
 	res.y = 1-(float)(1+B/Y);
 
 	return res;
 }
 
-/* This finds all the balls at once */
+/*	This finds all the balls at once
+	Gets:
+		(IplImage*) img				the image we search on
+		(IplImage*) ball_templates	the templates we search for
+		(int*) ball_counts			the max number of balls on the table for
+									each template
+		(bool*) ball_inv_templ		whether or not each template is an inverse
+		(double*) ball_thds			the threshold values for the correlation
+									for each template
+		(vector<CvPoint>*) ball_centers
+									an output array for the found position
+									vectors of each template
+		(int) n_balls				the number of templates (size of arrays) */
 void findBalls(IplImage *img, IplImage *ball_templates[],
 						 int ball_counts[], bool ball_inv_templ[],
 						 double ball_thds[], vector<CvPoint> ball_centers[],
 						 int n_balls) {
 
+	/* this is a copy of the image we mark find balls on (in order for the
+	correlation there with any other template to be small) */
 	IplImage *img_copy = cvCloneImage(img);
-							 
+	/* this is exactly the same only with the inverted image, to search for
+	inverted templates on */
 	IplImage *img_inv_copy = createBlankCopy(img_copy);
 	cvCvtColor(img_copy, img_inv_copy, CV_BGR2YCrCb);
 	cvNot(img_inv_copy, img_inv_copy);
 	cvCvtColor(img_inv_copy, img_inv_copy, CV_YCrCb2BGR);
+
+	/* mark the holes black on the image, for the correlation with the white
+	ball to	be small there */
 	paintHolesBlack(img_inv_copy);
 
+	/* set the ROI to be only the table itself (actually a bounding rect which
+	is a little bigger */
 	cvSetImageROI(img_copy, tableBordersBoundingRect());
 	cvSetImageROI(img_inv_copy, tableBordersBoundingRect());
 
+	/* search for the balls one by one */
 	for(int i=0; i<n_balls; i++) {
 		// find the template
 		vector<CvPoint> p;
 
-		if(FIND_TEMPL_DEBUG)
+		if(BALLS_FIND_DEBUG) {
 			cout<<"Finding "<<i<<endl;
+		}
+
+		// actually find the template
 		if(ball_inv_templ[i]) {
 			p = findTemplate(img_inv_copy, ball_templates[i], ball_thds[i], ball_counts[i], true);
 		} else {
@@ -93,14 +125,27 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 		ball_centers[i] = p;
 	}
 
+	// release temps
 	cvReleaseImage(&img_copy);
 	cvReleaseImage(&img_inv_copy);
 }
 
-/* Finds the point which best matches the template */
+/* Find the points which best matches a template
+	Gets:
+		(IplImage*) img		the image to search on
+		(IplImage*) templ	the template to search for
+		(double) corr_thd	the minimal correlation to say that it has been
+							found
+		(int) max_count		the maximal number of found points
+		(bool) custom_norm	whether or not to use our own normalization to
+							the correlation image
+	Returns:
+		(vector<CvPoint>)	the vector of found centers */
 vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 							 int max_count, bool custom_norm) {
 
+	/* for the custom_norm -- convert both the image and the template to
+	grayscale */
 	if(custom_norm) {
 		IplImage *I_gray = createBlankCopy(img, 1);
 		IplImage *T_gray = createBlankCopy(templ, 1);
@@ -118,39 +163,42 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 		img_s.height - templ_s.height + 1), IPL_DEPTH_32F, 1);
 
 	// get the correlation image
-	if(!custom_norm) {
+	if(!custom_norm) { // regular normalization
 		cvMatchTemplate(img, templ, match, CV_TM_CCORR_NORMED);
-	} else {
+
+	} else { // our normalization
 		cvMatchTemplate(img, templ, match, CV_TM_CCORR);
 		
-		// limit the image above 0
+		// limit the image to non-negative values
 		IplImage *limit_mask = cvCreateImage(cvSize(img_s.width - templ_s.width + 1,
 			img_s.height - templ_s.height + 1), IPL_DEPTH_8U, 1);
 		cvCmpS(match, 0, limit_mask, CV_CMP_LT);
 		cvSet(match, cvScalar(0), limit_mask);
 		cvReleaseImage(&limit_mask);
 
-		// shift and scale
+		// shift and scale to [0,1]
 		double tmp_max, tmp_min;
 		cvMinMaxLoc(match, &tmp_min, &tmp_max, 0, 0, 0);
 		cvAddS(match, cvScalar(-1*tmp_min), match);
 		cvConvertScale(match, match, 1/(tmp_max-tmp_min), 0);
 	}
 
-	if(FIND_TEMPL_DEBUG) {
+	if(BALLS_FIND_DEBUG) {
 		cvNamedWindow("Original Image", CV_WINDOW_AUTOSIZE);
 		cvShowImage("Original Image", img);
 	}
 
+	// the output vector
 	vector<CvPoint> res;
 
-	// find the maximal correlation
+	// find the maximas of the correlation image
 	for(int i = 0; i < max_count; i++) {
+		// find the max point and value
 		CvPoint max_p;
 		double max_val;
 		cvMinMaxLoc(match, 0, &max_val, 0, &max_p, 0);
 
-		if(FIND_TEMPL_DEBUG) {
+		if(BALLS_FIND_DEBUG) {
 			cvNamedWindow("Template", CV_WINDOW_AUTOSIZE);
 			cvShowImage("Template", templ);
 			
@@ -167,40 +215,46 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 			cvDestroyWindow("Original Image");
 
 			cvReleaseImage(&match_draw);
+
+			cout<<"corr: "<<max_val<<" vs "<<corr_thd<<endl;
 		}
 
-		if(FIND_TEMPL_DEBUG)
-			cout<<"corr: "<<max_val<<" vs "<<corr_thd<<endl;
-
 		if(max_val < corr_thd) {
+			// if we're below the correlation threshold, die
 			i = max_count;
 		} else {
 			if(custom_norm) {
+				/* if it's our normalization then we check that the value (1)
+				is enough above the mean of the image */
 				double mean = cvAvg(match).val[0];
 				
-				if(FIND_TEMPL_DEBUG) {
+				if(BALLS_FIND_DEBUG) {
 					cout<<"mean diff = "<<max_val-mean<<endl;
 				}
 
-				if(max_val-mean < corr_thd) { // no black ball. not much variance
+				if(max_val-mean < corr_thd) { // no black ball. not enough variance
 					i = max_count;
 					continue;
 				}
 			}
 			
+			/* mark the found ball as black on the image, in order to look for
+			the next maxima */
 			cvCircle(match, max_p, 1, cvScalar(0), BALL_DIAMETER);
 
-			// fix the position of the maximal correlation to be the middle of the
-			// template
+			/* fix the position of the found ball to be the middle of the
+			template */
 			max_p.x = max_p.x + (templ->width)/2;
 			max_p.y = max_p.y + (templ->height)/2;
 			
+			// add to the output vector
 			res.push_back(max_p);
 		}
 	}
 
+	// release temps
 	cvReleaseImage(&match);
-	if(custom_norm) {
+	if(custom_norm) { // release the grayscale images
 		cvReleaseImage(&img);
 		cvReleaseImage(&templ);
 	}
