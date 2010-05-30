@@ -6,14 +6,13 @@
 
 using namespace std;
 
-/* This returns a sequence of CvPoints specifying the contour of the
-board borders */
 CvSeq *tableBorders() {
 	static bool once = true;
 	static CvMemStorage *mem;
 	static CvSeq* borders;
 
 	if(once) {
+		// read from file only once
 		mem = cvCreateMemStorage();
 
 		char filename[100];
@@ -21,10 +20,10 @@ CvSeq *tableBorders() {
 		borders = (CvSeq*)cvLoad(filename, mem);
 	}
 
+	// and return it always
 	return borders;
 }
 
-/* This finds and draws the borders of the table */
 void drawBorders(IplImage *dst, int width) {
 	CvSeq *borders = tableBorders();
 
@@ -36,7 +35,6 @@ void drawBorders(IplImage *dst, int width) {
 	}
 }
 
-/* this prints the angles of the edges calibration */
 void printBorderAngles() {
 	CvSeq *borders = tableBorders();
 
@@ -58,8 +56,6 @@ void printBorderAngles() {
 		<<"left="<<betta*180/PI<<"\n"<<"right="<<betta_tag*180/PI<<endl;
 }
 
-/* Create a new IplImage, the same size of src. If channels is -1, it's also
-the same number of channels. The same for depth. */
 IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
 	if(depth == -1)
 		depth = src->depth;
@@ -69,7 +65,6 @@ IplImage *createBlankCopy(IplImage *src, int channels, int depth) {
 	return cvCreateImage(cvGetSize(src), depth, channels);
 }
 
-/* This filters points which are outside tableBorders() */
 vector<CvPoint2D32f> filterPointsOnTable(const vector<CvPoint2D32f> &centers,
 											  double max_dist) {
 
@@ -96,7 +91,6 @@ bool isPointOnTable(CvPoint p, double max_dist) {
 	return isPointOnTable(cvPoint2D32f(p.x, p.y), max_dist);
 }
 
-/* This marks a cross on the image */
 void markCross(IplImage *img, CvPoint center, CvScalar color) {
 
 	// print an overlay image of the found circle
@@ -118,11 +112,10 @@ void markCross(IplImage *img, CvPoint center, CvScalar color) {
 	cvReleaseImage(&overlay_drawing);
 }
 
-/* paints the holes of the table black */
 void paintHolesBlack(IplImage *img) {
 	CvSeq *borders = tableBorders();
 
-	// print the angles of the borders
+	// the hole points are:
 	// (0,0) (0,1), (1/2,-10/375), (1/2, 1+10/375), (1, 0), (1,1)
 
 	CvPoint p0 = *(CvPoint*)cvGetSeqElem(borders, 0); // top-left
@@ -148,25 +141,29 @@ void paintHolesBlack(IplImage *img) {
 CvRect tableBordersBoundingRect() {
 	CvSeq *borders = tableBorders();
 
+	// actually we return a rect with BOUNDING_RECT_OFFSET more on each side
 	CvRect bound = cvBoundingRect(borders);
 	return cvRect(bound.x-BOUNDING_RECT_OFFSET, bound.y-BOUNDING_RECT_OFFSET,
 		bound.width+BOUNDING_RECT_OFFSET, bound.height+BOUNDING_RECT_OFFSET);
 }
 
-/* check if an image is changing over time */
 bool isMoving(IplImage *img) {
+	// always keep a gray copy of the last frame
 	static IplImage *last_frame = 0;
 
 	if(last_frame == 0) {
+		// if it's the first time, allocate it and return
 		last_frame = createBlankCopy(img, 1);
 		cvCvtColor(img, last_frame, CV_BGR2GRAY);
 		return false;
 	}
 
+	// create a difference image of the gray images
 	IplImage *img_gray = createBlankCopy(last_frame);
 	IplImage *diff = createBlankCopy(last_frame);
 	cvCvtColor(img, img_gray, CV_BGR2GRAY);
 	cvAbsDiff(img_gray, last_frame, diff);
+	// threshold it
 	cvThreshold(diff, diff, 10, 255, CV_THRESH_BINARY);
 
 	if(IS_MOVING_DEBUG) {
@@ -174,8 +171,10 @@ bool isMoving(IplImage *img) {
 		cvShowImage("Diff", diff);
 	}
 
+	// update the last_frame
 	cvCopy(img_gray, last_frame);
 
+	// see if we have movement on any pixel
 	double max;
 	cvMinMaxLoc(diff, 0, &max, 0, 0);
 
@@ -185,7 +184,6 @@ bool isMoving(IplImage *img) {
 	return (max > 0);
 }
 
-/* l2 distance between points */
 double dist(CvPoint p1, CvPoint p2) {
 	return pow((p1.x - p2.x)*(p1.x - p2.x) +
 		(p1.y - p2.y)*(p1.y - p2.y), 0.5);

@@ -35,9 +35,6 @@
 #define CUE_BLOB_MAX_DIST_FROM_TABLE 25
 // the averaging time window when smoothing the cue angle
 #define CUE_SMOOTH_WINDOWS 7000000 // times 100 ns (=0.7s)
-// the downsampling factor for sending the cue angle (if it is 3 then
-// we send every third computed theta)
-#define CUE_THETA_DOWNSAMPLE 1
 
 // MAIN
 

@@ -8,14 +8,12 @@
 
 using namespace std;
 
-/* this finds points which reside on a line with some R^2 coefficient, and the
-line parameters */
 vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 								 double min_coeff, double *line_m,
 								 double *line_n, CvPoint *line_cm) {
 
-	// less than 2 blobs :/
-	if(points.size() < 2) {
+	// not enough blobs
+	if(points.size() < CUE_MIN_BLOBS) {
 		line_cm->x = -1;
 		line_cm->y = -1;
 		vector<CvPoint> empty;
@@ -31,7 +29,7 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 	// find the linear regression
 	linearRegression(d_points, &m_a, &m_b, &m_coeff);
 
-	// while it's not good enought and we have enough points
+	// while it's not good enough and we have enough points:
 	while(m_coeff < min_coeff && d_points.size() >= CUE_MIN_BLOBS) {
 		// find the furthest point
 		vector<CvPoint2D32f>::iterator max_iter = d_points.begin();
@@ -54,7 +52,7 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 	}
 
 	// if we didn't found a line good enough
-	if(d_points.size() < 2) {
+	if(d_points.size() < CUE_MIN_BLOBS) {
 		line_cm->x = -1;
 		line_cm->y = -1;
 		vector<CvPoint> empty;
@@ -84,12 +82,10 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 	return res_points;
 }
 
-/* this finds the distance between a point (x,y) and a line: y = m_a + m_b*x */
 double distFromLine(double x, double y, double m_a, double m_b) {
 	return fabs(-m_b*x + y -m_a)/sqrt(m_b*m_b + 1);
 }
 
-/* this finds the line parameters and R^2 of a list of points */
 void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 					  double *m_coeff) {
 	int n = points.size();
@@ -103,7 +99,7 @@ void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 	mean_x /= n;
 	mean_y /= n;
 
-	// calculate std
+	// calculate sums of square differences
 	double std_x = 0, std_y = 0;
 	double r_xy = 0;
 	for(int i=0; i<n; i++) {
@@ -112,13 +108,9 @@ void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 		std_y += diff_y*diff_y;
 		r_xy += diff_x*diff_y;
 	}
-	/*std_x = sqrt(std_x/n);
-	std_y = sqrt(std_y/n);
-	r_xy /= std_x*std_y*(n-1);*/
 
 	// calculate fit coefficients
 	*m_b = r_xy / std_x;
-	// *m_b = r_xy*std_y/std_x;
 	*m_a = mean_y - (*m_b)*mean_x;
 	
 	// calculate r^2
