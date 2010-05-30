@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
 	cout<<"available modes:\n";
 	cout<<"\t0: normal\n\t1: instance calibration\n\t2: general calibration\n";
 	cout<<"\t3: template grabbing\n\t4: learn edges\n";
+	cout<<"\t5: calibrate correlations\n";
 	cout<<"\t-1: watch with corrections\n";
 
 	int mode;
@@ -45,6 +46,9 @@ int main(int argc, char* argv[])
 	} else if(mode == 4) {
 		// learn edges
 		learnEdges(false, resolution, 0);
+	} else if(mode == 5) {
+		// calibrate correlations
+		calibrateCorrelationThds(resolution, 0);
 	} else if(mode == -1) {
 		// watch with corrections
 		watch(true, resolution, 0);
