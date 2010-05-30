@@ -104,6 +104,18 @@ void calibrationFromEdges(CvSeq *edges, CvSize resolution, int device_id);
 
 // ==============================================
 // ==============================================
+// CORRELATION CALIBRATION
+
+/*	Checks the found correlation of the balls after we take the templates,
+	and set some threshold below them as the later threshold for the ball
+	findings.
+	Gets:
+		(CvSize)resolution	the resolution of the camera to use
+		(int)device_id		the id of the camera to use */
+void calibrateCorrelationThds(CvSize resolution, int device_id);
+
+// ==============================================
+// ==============================================
 // MISC
 
 /* this fixes the mouse coordinates according to the image resolution */

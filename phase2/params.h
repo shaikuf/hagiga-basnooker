@@ -8,6 +8,12 @@
 #define BALLS_FIND_DEBUG 1
 // the offset outside the calibrated borders that we look for the balls in
 #define BOUNDING_RECT_OFFSET 5
+// the threshold above the calibrated mean we want to say that a ball was found
+// for inverse templates
+#define BALL_INV_CORR_THD 0.05
+// the threshold below the calibrated correlation we want to say that a ball
+// was found
+#define BALL_NORM_CORR_THD 0.05
 
 // CUE
 
