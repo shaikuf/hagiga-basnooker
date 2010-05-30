@@ -22,7 +22,7 @@
 // farther, we say that the cue is missing (or just not pointing at the white)
 #define CUE_MAX_DIST_FROM_WHITE 20.0
 // the threshold value when looking for the white blobs on the cue
-#define CUE_THRESH_VAL 230
+#define CUE_THRESH_VAL 220
 // the erode number of repetitions when morphologically filtering the
 // binary image after the threshold
 #define CUE_OPENING_VAL 1

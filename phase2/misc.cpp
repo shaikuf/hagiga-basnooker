@@ -18,6 +18,8 @@ CvSeq *tableBorders() {
 		char filename[100];
 		_snprintf_s(filename, 100, "edges-%d.xml", 0);
 		borders = (CvSeq*)cvLoad(filename, mem);
+
+		once = false;
 	}
 
 	// and return it always
@@ -129,7 +131,7 @@ void paintHolesBlack(IplImage *img) {
 	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+y_delta);
 		// bottom-center
 
-	int size = (p1.x - p0.x)*21/815;
+	int size = (p1.x - p0.x)*25/815;
 	cvCircle(img, p0, size, cvScalar(0), -1);
 	cvCircle(img, p1, size, cvScalar(0), -1);
 	cvCircle(img, p2, size, cvScalar(0), -1);

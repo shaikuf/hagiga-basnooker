@@ -51,7 +51,7 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 }
 
 bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
-							 vector<CvPoint> *ball_centers) {
+							 vector<CvPoint> *ball_centers, int balls_count) {
 	static bool once = true;
 	if(once && CUE_FIND_DEBUG) {
 		cvNamedWindow("gray");
@@ -70,7 +70,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	}
 
 	// paint the balls black so they wont be found
-	for(int i=0; i<ball_centers->size(); i++) {
+	for(int i=0; i<balls_count; i++) {
 		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
 			cvCircle(gray, ball_centers[i][j],
 				1, cvScalar(0), BALL_DIAMETER);

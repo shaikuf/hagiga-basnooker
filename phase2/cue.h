@@ -23,10 +23,11 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center);
 		(CvPoint)white_center	the center of the white ball
 		(double*)theta		a output variable for the found cue angle
 		(vector<CvPoint>*)ball_centers	a vector of the ball centers
+		(int)balls_count	the number of balls in the array
 	Returns:
 		(bool)	whether or not we found the cue */
 bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
-							 vector<CvPoint> *ball_centers);
+							 vector<CvPoint> *ball_centers, int balls_count);
 
 /* Return an averaging of the last given thetas over some time window
 	Gets:
