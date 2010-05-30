@@ -227,3 +227,74 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 
 	return res;
 }
+
+IplImage **ballTemplates() {
+	static IplImage* ball_templates[8];
+
+	static bool once = true;
+	if(once) {
+		int i;
+		char **ball_filenames = ballFilenames();
+		for(i=0; i<NUM_BALLS; i++) {
+			ball_templates[i] = cvLoadImage(ball_filenames[i]);
+		}
+		once = false;
+	}
+
+	return ball_templates;
+}
+
+char **ballFilenames() {
+	static char *ball_filenames[8] = {"white-templ.jpg", "pink-templ.jpg",
+		"red-templ.jpg", "yellow-templ.jpg", "green-templ.jpg",
+		"brown-templ.jpg", "blue-templ.jpg",  "black-templ.jpg"};
+
+	return ball_filenames;
+}
+
+CvScalar* ballInvColors() {
+	static CvScalar ball_inv_colors[8] = {cvScalar(0,0,0), cvScalar(52, 63, 0),
+		cvScalar(255, 255, 0), cvScalar(255, 0, 0), cvScalar(255, 0, 255),
+		cvScalar(255, 180, 105), cvScalar(0, 255, 255), 
+		cvScalar(255, 255, 255)};
+
+	return ball_inv_colors;
+}
+
+int* ballMaxCounts() {
+	static int ball_counts[8] = {1, 1, 15, 1, 1, 1, 1, 1};
+	return ball_counts;
+}
+
+double* ballCorrThds() {
+	static double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.7, 0.7, 0.85, 0.22};
+	/*static double ball_thd[8];
+
+	static bool once = true;
+	if(once) {
+		// read from file only once
+		CvMemStorage* mem = cvCreateMemStorage();
+		CvSeq* thds = (CvSeq*)cvLoad("corr-thd.xml", mem);
+		cvReleaseMemStorage(&mem);
+
+		int i;
+		for(i=0; i<NUM_BALLS; i++) {
+			ball_thd[i] = *(float*)cvGetSeqElem(thds, i);
+		}
+
+		once = false;
+	}*/
+
+	return ball_thd;
+}
+
+bool* ballInverseTempls() {
+	static bool ball_inv_templ[8] = {false, false, false, false, false, false, false,
+		true};
+	return ball_inv_templ;
+}
+
+char* ballTCPPrefixes(){
+	static char ball_tcp_prefix[8] = {'w', 'p', 'r', 'y', 'g', 'o', 'l', 'b'};
+	return ball_tcp_prefix;
+}

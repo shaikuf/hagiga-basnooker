@@ -45,4 +45,12 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 							 int max_count, bool custom_norm = false);
 
+IplImage **ballTemplates();
+char **ballFilenames();
+CvScalar* ballInvColors();
+int* ballMaxCounts();
+double* ballCorrThds();
+bool* ballInverseTempls();
+char* ballTCPPrefixes();
+
 #endif

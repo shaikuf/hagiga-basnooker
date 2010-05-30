@@ -786,6 +786,38 @@ void calibrationFromEdges(CvSeq *edges, CvSize resolution, int device_id) {
 	cvSave(filename,H); //We can reuse H for the same camera mounting
 }
 
+/*void calibrateCorrelationThds(CvSize resolution, int id) {
+	// init camera
+	VideoCapture capture(0, resolution.width, resolution.height);
+	IplImage *pre_image = capture.CreateCaptureImage();
+	IplImage *image = capture.CreateCaptureImage();
+
+	cvNamedWindow("Edges Marker", CV_WINDOW_AUTOSIZE);
+
+	// capture a frame
+	capture.waitFrame(pre_image);
+
+	// fix the perspective on the image, if we're not calibrating
+	char filename[100];
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+
+	CvMat* H = (CvMat*)cvLoad(filename);
+
+	cvWarpPerspective(pre_image, image,	H,
+		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+
+	cvReleaseMat(&H);
+
+	// find the balls
+	findBalls(image, ball_templates, ball_counts, ball_inv_templ, ball_thd,
+		ball_centers, NUM_BALLS);
+
+	// send to the client
+	for(i=0; i<NUM_BALLS; i++) {
+		
+	}
+}*/
+
 void fixCoordinates(int &x, int &y, CvSize resolution) {
 	// this is some ampiric fix i found
 	if(resolution.width = 1600) {
