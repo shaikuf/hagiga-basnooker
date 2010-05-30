@@ -77,7 +77,7 @@ void gameLoop(CvSize resolution, int device_id) {
 		// the number of possible balls of this type
 	int ball_counts[8] = {1, 1, 15, 1, 1, 1, 1, 1};
 		// the threshold for the correlation with the template
-	double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.75, 0.7, 0.85, 0.17};
+	double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.7, 0.7, 0.85, 0.17};
 		// whether or not this ball has an "inverse" template
 	bool ball_inv_templ[8] = {false, false, false, false, false, false, false,
 		true};
@@ -194,7 +194,7 @@ void gameLoop(CvSize resolution, int device_id) {
 
 				// try to find the cue
 				found_cue = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
-					ball_centers);
+					ball_centers, NUM_BALLS);
 
 				if(found_cue) {
 					// smooth and send to client
