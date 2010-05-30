@@ -267,23 +267,21 @@ int* ballMaxCounts() {
 }
 
 double* ballCorrThds() {
-	static double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.7, 0.7, 0.85, 0.22};
-	/*static double ball_thd[8];
+	//static double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.7, 0.7, 0.85, 0.22};
+	static double ball_thd[8];
 
 	static bool once = true;
 	if(once) {
 		// read from file only once
-		CvMemStorage* mem = cvCreateMemStorage();
-		CvSeq* thds = (CvSeq*)cvLoad("corr-thd.xml", mem);
-		cvReleaseMemStorage(&mem);
+		CvMat* thds = (CvMat*)cvLoad("corr-thd.xml");
 
 		int i;
 		for(i=0; i<NUM_BALLS; i++) {
-			ball_thd[i] = *(float*)cvGetSeqElem(thds, i);
+			ball_thd[i] = CV_MAT_ELEM(*thds, float, 0, i);
 		}
 
 		once = false;
-	}*/
+	}
 
 	return ball_thd;
 }
@@ -297,4 +295,126 @@ bool* ballInverseTempls() {
 char* ballTCPPrefixes(){
 	static char ball_tcp_prefix[8] = {'w', 'p', 'r', 'y', 'g', 'o', 'l', 'b'};
 	return ball_tcp_prefix;
+}
+
+void findBallCorrelations(IplImage* img, IplImage* ball_templates[],
+						  bool ball_inv_templ[], double ball_corr[],
+						  int n_balls) {
+	  
+	/* this is a copy of the image we mark find balls on (in order for the
+	correlation there with any other template to be small) */
+	IplImage *img_copy = cvCloneImage(img);
+	/* this is exactly the same only with the inverted image, to search for
+	inverted templates on */
+	IplImage *img_inv_copy = createBlankCopy(img_copy);
+	cvCvtColor(img_copy, img_inv_copy, CV_BGR2YCrCb);
+	cvNot(img_inv_copy, img_inv_copy);
+	cvCvtColor(img_inv_copy, img_inv_copy, CV_YCrCb2BGR);
+
+	/* mark the holes black on the image, for the correlation with the white
+	ball to	be small there */
+	paintHolesBlack(img_inv_copy);
+
+	/* set the ROI to be only the table itself (actually a bounding rect which
+	is a little bigger */
+	cvSetImageROI(img_copy, tableBordersBoundingRect());
+	cvSetImageROI(img_inv_copy, tableBordersBoundingRect());
+
+	/* search for the balls one by one */
+	for(int i=0; i<n_balls; i++) {
+		// find the template and correlation
+		double corr;
+		CvPoint p = findTemplateCorrelation(img, ball_templates[i],
+			ball_inv_templ[i], &corr);
+
+		// paint the found ball black
+		cvCircle(img_copy, p, 1, cvScalar(0), BALL_DIAMETER*3/4);
+		cvCircle(img_inv_copy, p, 1, cvScalar(0), BALL_DIAMETER*3/4);
+
+		// add the thd. to the correlation
+		if(ball_inv_templ[i]) {
+			corr += BALL_INV_CORR_THD;
+		} else {
+			corr -= BALL_NORM_CORR_THD;
+		}
+
+		// set on the results array
+		ball_corr[i] = corr;
+	}
+
+	// release temps
+	cvReleaseImage(&img_copy);
+	cvReleaseImage(&img_inv_copy);
+}
+
+CvPoint findTemplateCorrelation(IplImage *img, IplImage *templ, bool custom_norm,
+							 double *corr) {
+
+	/* for the custom_norm -- convert both the image and the template to
+	grayscale */
+	if(custom_norm) {
+		IplImage *I_gray = createBlankCopy(img, 1);
+		IplImage *T_gray = createBlankCopy(templ, 1);
+		cvCvtColor(img, I_gray, CV_BGR2GRAY);
+		cvCvtColor(templ, T_gray, CV_BGR2GRAY);
+		img = I_gray;
+		templ = T_gray;
+	}
+
+	CvSize img_s = cvGetSize(img);
+	CvSize templ_s = cvGetSize(templ);
+
+	// create an image the size the correlation function return
+	IplImage *match = cvCreateImage(cvSize(img_s.width - templ_s.width + 1,
+		img_s.height - templ_s.height + 1), IPL_DEPTH_32F, 1);
+
+	// get the correlation image
+	if(!custom_norm) { // regular normalization
+		cvMatchTemplate(img, templ, match, CV_TM_CCORR_NORMED);
+
+	} else { // our normalization
+		cvMatchTemplate(img, templ, match, CV_TM_CCORR);
+		
+		// limit the image to non-negative values
+		IplImage *limit_mask = cvCreateImage(cvSize(img_s.width - templ_s.width + 1,
+			img_s.height - templ_s.height + 1), IPL_DEPTH_8U, 1);
+		cvCmpS(match, 0, limit_mask, CV_CMP_LT);
+		cvSet(match, cvScalar(0), limit_mask);
+		cvReleaseImage(&limit_mask);
+
+		// shift and scale to [0,1]
+		double tmp_max, tmp_min;
+		cvMinMaxLoc(match, &tmp_min, &tmp_max, 0, 0, 0);
+		cvAddS(match, cvScalar(-1*tmp_min), match);
+		cvConvertScale(match, match, 1/(tmp_max-tmp_min), 0);
+	}
+
+	// find the maximum of the correlation image
+	CvPoint max_p;
+	double max_val;
+	cvMinMaxLoc(match, 0, &max_val, 0, &max_p, 0);
+
+	// set the found correlation (or equiv.) in the output variable
+	if(custom_norm) {
+		double mean = cvAvg(match).val[0];
+
+		*corr = max_val-mean;
+	} else {
+		*corr = max_val;
+	}
+
+	/* fix the position of the found ball to be the middle of the
+	template */
+	max_p.x = max_p.x + (templ->width)/2;
+	max_p.y = max_p.y + (templ->height)/2;
+
+	// release temps
+	cvReleaseImage(&match);
+	if(custom_norm) { // release the grayscale images
+		cvReleaseImage(&img);
+		cvReleaseImage(&templ);
+	}
+
+	// return the found position
+	return max_p;
 }

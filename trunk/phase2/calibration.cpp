@@ -786,7 +786,7 @@ void calibrationFromEdges(CvSeq *edges, CvSize resolution, int device_id) {
 	cvSave(filename,H); //We can reuse H for the same camera mounting
 }
 
-/*void calibrateCorrelationThds(CvSize resolution, int id) {
+void calibrateCorrelationThds(CvSize resolution, int device_id) {
 	// init camera
 	VideoCapture capture(0, resolution.width, resolution.height);
 	IplImage *pre_image = capture.CreateCaptureImage();
@@ -808,15 +808,22 @@ void calibrationFromEdges(CvSeq *edges, CvSize resolution, int device_id) {
 
 	cvReleaseMat(&H);
 
-	// find the balls
-	findBalls(image, ball_templates, ball_counts, ball_inv_templ, ball_thd,
-		ball_centers, NUM_BALLS);
+	// find the ball correlations
+	int ball_counts[8] = {1,1,1,1,1,1,1,1};
+	int ball_thd[8] = {0,0,0,0,0,0,0,1};
+	double ball_corr[8];
+	findBallCorrelations(image, ballTemplates(), ballInverseTempls(),
+		ball_corr, NUM_BALLS);
 
-	// send to the client
-	for(i=0; i<NUM_BALLS; i++) {
-		
+	// save to file
+	CvMat *corr_thds = cvCreateMat(1, 8, CV_32F);
+
+	for(int i=0; i<NUM_BALLS; i++) {
+		CV_MAT_ELEM(*corr_thds, float, 0, i) = (float)ball_thd[i];
 	}
-}*/
+
+	cvSave("corr-thd.xml", corr_thds);
+}
 
 void fixCoordinates(int &x, int &y, CvSize resolution) {
 	// this is some ampiric fix i found

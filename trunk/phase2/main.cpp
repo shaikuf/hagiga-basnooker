@@ -62,21 +62,12 @@ void gameLoop(CvSize resolution, int device_id) {
 	cvNamedWindow("Game", CV_WINDOW_AUTOSIZE);
 
 	// load ball templates
-		// will contain the templates
 	IplImage **ball_templates = ballTemplates();
-		// filenames of the templates
-		// the inverse of the colors of the templates (will be the color of
-		// the cross markings)
 	CvScalar* ball_inv_colors = ballInvColors();
-		// the number of possible balls of this type
 	int* ball_counts = ballMaxCounts();
-		// the threshold for the correlation with the template
 	double* ball_thd = ballCorrThds();
-		// whether or not this ball has an "inverse" template
 	bool* ball_inv_templ = ballInverseTempls();
-		// the prefixes we use when sending the position of the balls over TCP
 	char* ball_tcp_prefix = ballTCPPrefixes();
-		// the array of position vectors matched for the balls
 	vector<CvPoint> ball_centers[8];
 
 	// load projective transformation matrix
