@@ -14,8 +14,12 @@ public:
 	TCPServer(int port = PORT);
 	~TCPServer();
 
+	// if we don't have a new connection, check for one. if we do --
+	// check for incoming messages
+	// returns 1 if we got a msg (only one is "refetch")
 	int update();
 
+	// Come on! these are trivial. I'm too tired to do this.
 	void send_ball_pos(float x, float y, char prefix);
 	void send_theta(double theta);
 	void send_raw(char *str);

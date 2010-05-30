@@ -9,7 +9,6 @@
 
 using namespace std;
 
-/* Convert the line from center of mass and slope to theta */
 double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 	double theta;
 
@@ -41,6 +40,7 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 		}
 	}
 
+	// mode 2*PI;
 	theta = theta;
 	if(theta >= 2*PI)
 		theta -= 2*PI;
@@ -50,11 +50,9 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 	return theta;
 }
 
-/* Find the parameters of the cue using the white markers */
 bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
-							 vector<CvPoint> *ball_centers, int ball_centers_num) {
+							 vector<CvPoint> *ball_centers) {
 	static bool once = true;
-
 	if(once && CUE_FIND_DEBUG) {
 		cvNamedWindow("gray");
 		cvNamedWindow("threshold");
@@ -72,14 +70,10 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	}
 
 	// paint the balls black so they wont be found
-	if(ball_centers[0].size() > 0) {
-		cvCircle(gray, ball_centers[0].front(),
-				1, cvScalar(0), BALL_DIAMETER);
-	}
-	for(int i=0; i<ball_centers_num; i++) {
+	for(int i=0; i<ball_centers->size(); i++) {
 		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
 			cvCircle(gray, ball_centers[i][j],
-				1, cvScalar(0), BALL_DIAMETER/1);
+				1, cvScalar(0), BALL_DIAMETER);
 		}
 	}
 
@@ -93,7 +87,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 
 	// morphological operations:
 	IplImage *morph = cvCloneImage(thresh);
-	IplImage *morph_marked;
+	IplImage *morph_marked = 0;
 
 		// remove small objects
 	cvErode(morph, morph, 0, CUE_OPENING_VAL);
@@ -119,6 +113,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	CvContourScanner scanner = cvStartFindContours(temp, mem_storage, \
 		sizeof(CvContour), CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
+		// filter/approximate the blobs
 	CvSeq* c;
 	int numCont = 0;
 	while( (c = cvFindNextContour( scanner )) != NULL ) {
@@ -138,7 +133,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	}
 	contours = cvEndFindContours( &scanner );
 
-		// find the contour centers
+		// find the blob centers
 	int i;
 	vector<CvPoint2D32f> centers;
 	CvMoments moments;
@@ -156,9 +151,13 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		// filter those outside the borders by far
 	centers = filterPointsOnTable(centers, CUE_BLOB_MAX_DIST_FROM_TABLE);
 
-	for(unsigned i=0; i<centers.size(); i++)
-		cvCircle(morph_marked, cvPoint((int)centers[i].x, (int)centers[i].y), 1,
-					cvScalar(0, 255, 255), 3);
+		// mark them on the debug image
+	if(CUE_FIND_DEBUG) {
+		for(unsigned i=0; i<centers.size(); i++) {
+			cvCircle(morph_marked, cvPoint((int)centers[i].x,
+				(int)centers[i].y), 1, cvScalar(0, 255, 255), 3);
+		}
+	}
 
 	// find the points with best linear regression
 	double cue_n;
@@ -232,14 +231,15 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	return found_cue;
 }
 
-/* This keeps the last thetas and smooths the samples of it */
 double smoothTheta(double new_theta) {
 	static bool once;
 
+	// get the current time
 	FILETIME now;
 	GetSystemTimeAsFileTime(&now);
 	__int64 now_i = ((__int64)now.dwHighDateTime << 32) + now.dwLowDateTime;
 
+	// keep a vector of the thetas still in our time window
 	typedef pair<double, __int64> theta_time;
 	static vector<theta_time> last_samples;
 
@@ -257,7 +257,7 @@ double smoothTheta(double new_theta) {
 	// insert the new theta
 	last_samples.push_back(theta_time(new_theta, now_i));
 
-	// calculate the current theta
+	// calculate the smoothed theta
 	double mean_theta = 0;
 	for(itr = last_samples.begin(); itr != last_samples.end(); itr++)
 		mean_theta += itr->first;
