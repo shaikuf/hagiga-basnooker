@@ -5,14 +5,14 @@
 // BALLS
 
 // whether to run the balls finding in debug mode
-#define BALLS_FIND_DEBUG 0
+#define BALLS_FIND_DEBUG 1
 // the offset outside the calibrated borders that we look for the balls in
 #define BOUNDING_RECT_OFFSET 5
 
 // CUE
 
 // whether to run the cue finding in debug mode
-#define CUE_FIND_DEBUG 1
+#define CUE_FIND_DEBUG 0
 
 // the minimal R^2 we want when searching for the cue
 #define CUE_MIN_COEFF 0.985

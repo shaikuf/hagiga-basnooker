@@ -63,34 +63,21 @@ void gameLoop(CvSize resolution, int device_id) {
 
 	// load ball templates
 		// will contain the templates
-	IplImage *ball_templates[8];
+	IplImage **ball_templates = ballTemplates();
 		// filenames of the templates
-	char *ball_filenames[8] = {"white-templ.jpg", "pink-templ.jpg",
-		"red-templ.jpg", "yellow-templ.jpg", "green-templ.jpg",
-		"brown-templ.jpg", "blue-templ.jpg",  "black-templ.jpg"};
 		// the inverse of the colors of the templates (will be the color of
 		// the cross markings)
-	CvScalar ball_inv_colors[8] = {cvScalar(0,0,0), cvScalar(52, 63, 0),
-		cvScalar(255, 255, 0), cvScalar(255, 0, 0), cvScalar(255, 0, 255),
-		cvScalar(255, 180, 105), cvScalar(0, 255, 255), 
-		cvScalar(255, 255, 255)};
+	CvScalar* ball_inv_colors = ballInvColors();
 		// the number of possible balls of this type
-	int ball_counts[8] = {1, 1, 15, 1, 1, 1, 1, 1};
+	int* ball_counts = ballMaxCounts();
 		// the threshold for the correlation with the template
-	double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.7, 0.7, 0.85, 0.17};
+	double* ball_thd = ballCorrThds();
 		// whether or not this ball has an "inverse" template
-	bool ball_inv_templ[8] = {false, false, false, false, false, false, false,
-		true};
+	bool* ball_inv_templ = ballInverseTempls();
 		// the prefixes we use when sending the position of the balls over TCP
-	char ball_tcp_prefix[8] = {'w', 'p', 'r', 'y', 'g', 'o', 'l', 'b'};
+	char* ball_tcp_prefix = ballTCPPrefixes();
 		// the array of position vectors matched for the balls
 	vector<CvPoint> ball_centers[8];
-
-		// actually load the templates
-	int i;
-	for(i=0; i<NUM_BALLS; i++) {
-		ball_templates[i] = cvLoadImage(ball_filenames[i]);
-	}
 
 	// load projective transformation matrix
 	CvMat* H;
@@ -100,7 +87,10 @@ void gameLoop(CvSize resolution, int device_id) {
 		H = (CvMat*)cvLoad(filename);
 	}
 
+
+
 	// initialization
+	int i;
 	bool find_balls = true;	// whether or not to find balls on the current
 							// iteration of the main loop
 	bool found_cue = false; // whether or not we found the cue on the current
@@ -264,7 +254,7 @@ void gameLoop(CvSize resolution, int device_id) {
 			drawBorders(image, 1);
 		}
 		cvShowImage("Game", image);
-		c=cvWaitKey(100);
+		c=cvWaitKey(50);
 	}
 
 	// release stuff
