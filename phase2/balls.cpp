@@ -81,7 +81,9 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 		}
 
 		// actually find the template
-		if(ball_inv_templ[i]) {
+		if(i == 0) { // pink or white?
+			p = findPinkOrWhite(img_copy, ball_templates[0], ball_templates[1], ball_thds[0]);
+		} else if(ball_inv_templ[i]) {
 			p = findTemplate(img_inv_copy, ball_templates[i], ball_thds[i], ball_counts[i], true);
 		} else {
 			p = findTemplate(img_copy, ball_templates[i], ball_thds[i], ball_counts[i]);
@@ -172,7 +174,7 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 			IplImage *match_draw = createBlankCopy(match, 3);
 			cvCvtColor(match, match_draw, CV_GRAY2BGR);
 			cvCircle(match_draw, max_p, 1, cvScalar(0xff, 0), 2);
-
+			cout<<"corr: "<<max_val<<" vs "<<corr_thd<<endl;
 			cvNamedWindow("Template matching", CV_WINDOW_AUTOSIZE);
 			cvShowImage("Template matching", match_draw);
 			cvWaitKey(0);
@@ -182,7 +184,7 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 
 			cvReleaseImage(&match_draw);
 
-			cout<<"corr: "<<max_val<<" vs "<<corr_thd<<endl;
+			
 		}
 
 		if(max_val < corr_thd) {
@@ -195,7 +197,7 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 				double mean = cvAvg(match).val[0];
 				
 				if(BALLS_FIND_DEBUG) {
-					cout<<"mean diff = "<<max_val-mean<<endl;
+					cout<<"1-mean = "<<max_val-mean<<endl;
 				}
 
 				if(max_val-mean < corr_thd) { // no black ball. not enough variance
@@ -228,6 +230,55 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 	return res;
 }
 
+vector<CvPoint> findPinkOrWhite(IplImage *img, IplImage *templ_p,
+								 IplImage *templ_w, double corr_thd) {
+
+	CvSize img_s = cvGetSize(img);
+	CvSize templ_w_s = cvGetSize(templ_w);
+	CvSize templ_p_s = cvGetSize(templ_p);
+
+	// create an image the size the correlation function return
+	IplImage *match_w = cvCreateImage(cvSize(img_s.width - templ_w_s.width + 1,
+		img_s.height - templ_w_s.height + 1), IPL_DEPTH_32F, 1);
+	IplImage *match_p = cvCreateImage(cvSize(img_s.width - templ_p_s.width + 1,
+		img_s.height - templ_p_s.height + 1), IPL_DEPTH_32F, 1);
+
+	cvMatchTemplate(img, templ_w, match_w, CV_TM_CCORR_NORMED);
+	cvMatchTemplate(img, templ_p, match_p, CV_TM_CCORR_NORMED);
+
+	// the output vector
+	vector<CvPoint> res;
+
+	// find the max point and value
+	CvPoint max_p_w;
+	double max_val_w;
+	CvPoint max_p_p;
+	double max_val_p;
+	cvMinMaxLoc(match_w, 0, &max_val_w, 0, &max_p_w, 0);
+	cvMinMaxLoc(match_p, 0, &max_val_p, 0, &max_p_p, 0);
+
+	if(max_val_p >= corr_thd) {
+		// check if it's really the pink or it's actually white
+		if(max_val_w >= max_val_p && dist(max_p_p, max_p_w) <= BALL_DIAMETER) {
+			// not really found! it's the white.
+		} else {
+			/* fix the position of the found ball to be the middle of the
+			template */
+			max_p_p.x = max_p_p.x + (templ_p->width)/2;
+			max_p_p.y = max_p_p.y + (templ_p->height)/2;
+			
+			// add to the output vector
+			res.push_back(max_p_p);
+		}
+	}
+
+	// release temps
+	cvReleaseImage(&match_p);
+	cvReleaseImage(&match_w);
+
+	return res;
+}
+
 IplImage **ballTemplates() {
 	static IplImage* ball_templates[8];
 
@@ -245,7 +296,7 @@ IplImage **ballTemplates() {
 }
 
 char **ballFilenames() {
-	static char *ball_filenames[8] = {"white-templ.jpg", "pink-templ.jpg",
+	static char *ball_filenames[8] = {"pink-templ.jpg", "white-templ.jpg",
 		"red-templ.jpg", "yellow-templ.jpg", "green-templ.jpg",
 		"brown-templ.jpg", "blue-templ.jpg",  "black-templ.jpg"};
 
@@ -253,7 +304,7 @@ char **ballFilenames() {
 }
 
 CvScalar* ballInvColors() {
-	static CvScalar ball_inv_colors[8] = {cvScalar(0,0,0), cvScalar(52, 63, 0),
+	static CvScalar ball_inv_colors[8] = {cvScalar(52, 63, 0), cvScalar(0,0,0),
 		cvScalar(255, 255, 0), cvScalar(255, 0, 0), cvScalar(255, 0, 255),
 		cvScalar(255, 180, 105), cvScalar(0, 255, 255), 
 		cvScalar(255, 255, 255)};
@@ -293,13 +344,15 @@ bool* ballInverseTempls() {
 }
 
 char* ballTCPPrefixes(){
-	static char ball_tcp_prefix[8] = {'w', 'p', 'r', 'y', 'g', 'o', 'l', 'b'};
+	static char ball_tcp_prefix[8] = {'p', 'w', 'r', 'y', 'g', 'o', 'l', 'b'};
 	return ball_tcp_prefix;
 }
 
 void findBallCorrelations(IplImage* img, IplImage* ball_templates[],
 						  bool ball_inv_templ[], double ball_corr[],
 						  int n_balls) {
+
+	double thd_diffs[] = BALL_CORR_THD;
 	  
 	/* this is a copy of the image we mark find balls on (in order for the
 	correlation there with any other template to be small) */
@@ -323,20 +376,24 @@ void findBallCorrelations(IplImage* img, IplImage* ball_templates[],
 	/* search for the balls one by one */
 	for(int i=0; i<n_balls; i++) {
 		// find the template and correlation
+		CvPoint p;
 		double corr;
-		CvPoint p = findTemplateCorrelation(img, ball_templates[i],
-			ball_inv_templ[i], &corr);
+		if(ball_inv_templ[i]) {
+			p = findTemplateCorrelation(img_inv_copy, ball_templates[i],
+				true, &corr);
+		} else {
+			p = findTemplateCorrelation(img_copy, ball_templates[i],
+				false, &corr);
+		}
 
 		// paint the found ball black
 		cvCircle(img_copy, p, 1, cvScalar(0), BALL_DIAMETER*3/4);
 		cvCircle(img_inv_copy, p, 1, cvScalar(0), BALL_DIAMETER*3/4);
 
+		cout<<"corr["<<i<<"]:"<<corr<<",  ths:<<";
 		// add the thd. to the correlation
-		if(ball_inv_templ[i]) {
-			corr += BALL_INV_CORR_THD;
-		} else {
-			corr -= BALL_NORM_CORR_THD;
-		}
+		corr -= thd_diffs[i];
+		cout<<corr<<endl;
 
 		// set on the results array
 		ball_corr[i] = corr;
@@ -399,6 +456,7 @@ CvPoint findTemplateCorrelation(IplImage *img, IplImage *templ, bool custom_norm
 		double mean = cvAvg(match).val[0];
 
 		*corr = max_val-mean;
+		cout<<*corr<<endl;
 	} else {
 		*corr = max_val;
 	}

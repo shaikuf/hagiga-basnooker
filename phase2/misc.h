@@ -30,7 +30,7 @@ CvSeq *tableBorders();
 /*	Get the bounding rect of the table borders.
 	Returns:
 		(CvRect)	the said rect*/
-CvRect tableBordersBoundingRect();
+CvRect tableBordersBoundingRect(int offset = BOUNDING_RECT_OFFSET);
 
 /*	Draw the borders of the table on an image.
 	Gets:

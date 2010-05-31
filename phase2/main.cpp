@@ -174,12 +174,13 @@ void gameLoop(CvSize resolution, int device_id) {
 		if(FIND_CUE) {
 			found_cue = false;
 				// if we found the white -- look for the cue
-			if(ball_centers[0].size() > 0) {
+			if(ball_centers[WHITE_INDEX].size() > 0) {
 				double theta;
 
 				// try to find the cue
-				found_cue = findCueWithWhiteMarkers(image, ball_centers[0].front(), &theta,
-					ball_centers, NUM_BALLS);
+				found_cue = findCueWithWhiteMarkers(image,
+					ball_centers[WHITE_INDEX].front(), &theta, ball_centers,
+					NUM_BALLS);
 
 				if(found_cue) {
 					// smooth and send to client
@@ -218,13 +219,16 @@ void gameLoop(CvSize resolution, int device_id) {
 				// check if we're frozen for X time
 				if(cur_time - freeze_time > IS_MOVING_WINDOW && !checked_white) {
 					// check if the white moved
-					vector<CvPoint> new_white;
-					findBalls(image, ball_templates, ball_counts, ball_inv_templ, ball_thd,
-						&new_white, 1);
+					vector<CvPoint> new_white[2];
+					findBalls(image, ball_templates, ball_counts,
+						ball_inv_templ, ball_thd, new_white,
+						WHITE_INDEX+1);
 
-					if((ball_centers[0].size() != new_white.size()) ||
-						((ball_centers[0].size() > 0) &&
-						(dist(ball_centers[0][0], new_white[0]) >
+					if((ball_centers[WHITE_INDEX].size() !=
+						new_white[WHITE_INDEX].size()) ||
+						((ball_centers[WHITE_INDEX].size() > 0) &&
+						(dist(ball_centers[WHITE_INDEX][0],
+						new_white[WHITE_INDEX][0]) >
 						IS_MOVING_WHITE_DIST))) {
 							// if it did move/appear/disappear
 

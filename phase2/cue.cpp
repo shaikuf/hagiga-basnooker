@@ -61,20 +61,30 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		once = false;
 	}
 
+	CvRect roi = tableBordersBoundingRect(CUE_BLOB_MAX_DIST_FROM_TABLE);
+
 	// create grayscale image
 	IplImage* gray = createBlankCopy(src, 1);
 	cvCvtColor(src, gray, CV_BGR2GRAY);
 
-	if(CUE_FIND_DEBUG) {
-		cvShowImage("gray", gray);
-	}
+	if(CUE_FIND_BLACK)
+		cvAbsDiffS(gray, gray, cvScalar(255));
+	paintHolesBlack(gray);
 
 	// paint the balls black so they wont be found
 	for(int i=0; i<balls_count; i++) {
 		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
 			cvCircle(gray, ball_centers[i][j],
-				1, cvScalar(0), BALL_DIAMETER);
+				1, cvScalar(0), BALL_DIAMETER_FOR_CUE_FINDING);
 		}
+	}
+
+	cvSetImageROI(gray, roi);
+	white_center.x -= roi.x;
+	white_center.y -= roi.y;
+
+	if(CUE_FIND_DEBUG) {
+		cvShowImage("gray", gray);
 	}
 
 	// threshold to leave only white markers
@@ -148,9 +158,6 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		centers.push_back(cvPoint2D32f((M10/M00),(M01/M00)));
 	}
 
-		// filter those outside the borders by far
-	centers = filterPointsOnTable(centers, CUE_BLOB_MAX_DIST_FROM_TABLE);
-
 		// mark them on the debug image
 	if(CUE_FIND_DEBUG) {
 		for(unsigned i=0; i<centers.size(); i++) {
@@ -187,12 +194,12 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	if(CUE_FIND_DEBUG && cue_cm.x != -1) {
 		for(i=0; i < (int)real_centers.size(); i++) {
 			if(found_cue) {
-				cvCircle(src, cvPoint(real_centers[i].x, real_centers[i].y), 1,
+				cvCircle(src, cvPoint(real_centers[i].x+roi.x, real_centers[i].y+roi.y), 1,
 					cvScalar(255, 0, 0), 3);
 				cvCircle(morph_marked, cvPoint(real_centers[i].x, real_centers[i].y), 1,
 					cvScalar(255, 0, 0), 3);
 			} else {
-				cvCircle(src, cvPoint(real_centers[i].x, real_centers[i].y), 1,
+				cvCircle(src, cvPoint(real_centers[i].x+roi.x, real_centers[i].y+roi.y), 1,
 					cvScalar(0, 0, 255), 3);
 				cvCircle(morph_marked, cvPoint(real_centers[i].x, real_centers[i].y), 1,
 					cvScalar(0, 0, 255), 3);
@@ -261,6 +268,7 @@ double smoothTheta(double new_theta) {
 	double mean_theta = 0;
 	for(itr = last_samples.begin(); itr != last_samples.end(); itr++)
 		mean_theta += itr->first;
+
 
 	return mean_theta/last_samples.size();
 }
