@@ -124,14 +124,26 @@ void paintHolesBlack(IplImage *img) {
 	CvPoint p1 = *(CvPoint*)cvGetSeqElem(borders, 1); // top-right
 	CvPoint p2 = *(CvPoint*)cvGetSeqElem(borders, 2); // bottom-right
 	CvPoint p3 = *(CvPoint*)cvGetSeqElem(borders, 3); // bottom-left
+	
+	int x_delta = 8;
+	int y_delta = 8;
+	int x_delta_top = -6;
+	p0.x -= x_delta + x_delta_top-4;
+	p0.y += 3;
+	p1.x += x_delta + x_delta_top;
+	p1.y += 3;
+	p2.x += x_delta;
+	p2.y += y_delta;
+	p3.x -= x_delta - 10;
+	p3.y += y_delta;
 
-	int y_delta = (int)((p2.y-p1.y)*1/37.5);
-	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2-y_delta);
+	int y_delta_mid = 8;
+	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2-y_delta_mid);
 		// top-center
-	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+y_delta);
+	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+y_delta_mid);
 		// bottom-center
 
-	int size = (p1.x - p0.x)*25/815;
+	int size = 30;
 	cvCircle(img, p0, size, cvScalar(0), -1);
 	cvCircle(img, p1, size, cvScalar(0), -1);
 	cvCircle(img, p2, size, cvScalar(0), -1);
@@ -140,13 +152,13 @@ void paintHolesBlack(IplImage *img) {
 	cvCircle(img, p5, size, cvScalar(0), -1);
 }
 
-CvRect tableBordersBoundingRect() {
+CvRect tableBordersBoundingRect(int offset) {
 	CvSeq *borders = tableBorders();
 
 	// actually we return a rect with BOUNDING_RECT_OFFSET more on each side
 	CvRect bound = cvBoundingRect(borders);
-	return cvRect(bound.x-BOUNDING_RECT_OFFSET, bound.y-BOUNDING_RECT_OFFSET,
-		bound.width+BOUNDING_RECT_OFFSET, bound.height+BOUNDING_RECT_OFFSET);
+	return cvRect(bound.x-offset/2, bound.y-offset/2,
+		bound.width+offset, bound.height+offset);
 }
 
 bool isMoving(IplImage *img) {
@@ -166,7 +178,7 @@ bool isMoving(IplImage *img) {
 	cvCvtColor(img, img_gray, CV_BGR2GRAY);
 	cvAbsDiff(img_gray, last_frame, diff);
 	// threshold it
-	cvThreshold(diff, diff, 10, 255, CV_THRESH_BINARY);
+	cvThreshold(diff, diff, 20, 255, CV_THRESH_BINARY);
 
 	if(IS_MOVING_DEBUG) {
 		cvNamedWindow("Diff");

@@ -792,8 +792,6 @@ void calibrateCorrelationThds(CvSize resolution, int device_id) {
 	IplImage *pre_image = capture.CreateCaptureImage();
 	IplImage *image = capture.CreateCaptureImage();
 
-	cvNamedWindow("Edges Marker", CV_WINDOW_AUTOSIZE);
-
 	// capture a frame
 	capture.waitFrame(pre_image);
 
@@ -815,11 +813,12 @@ void calibrateCorrelationThds(CvSize resolution, int device_id) {
 	findBallCorrelations(image, ballTemplates(), ballInverseTempls(),
 		ball_corr, NUM_BALLS);
 
+
 	// save to file
 	CvMat *corr_thds = cvCreateMat(1, 8, CV_32F);
 
 	for(int i=0; i<NUM_BALLS; i++) {
-		CV_MAT_ELEM(*corr_thds, float, 0, i) = (float)ball_thd[i];
+		CV_MAT_ELEM(*corr_thds, float, 0, i) = (float)ball_corr[i];
 	}
 
 	cvSave("corr-thd.xml", corr_thds);

@@ -5,20 +5,19 @@
 // BALLS
 
 // whether to run the balls finding in debug mode
-#define BALLS_FIND_DEBUG 1
+#define BALLS_FIND_DEBUG 0
 // the offset outside the calibrated borders that we look for the balls in
 #define BOUNDING_RECT_OFFSET 5
-// the threshold above the calibrated mean we want to say that a ball was found
-// for inverse templates
-#define BALL_INV_CORR_THD 0.05
 // the threshold below the calibrated correlation we want to say that a ball
 // was found
-#define BALL_NORM_CORR_THD 0.05
+#define BALL_CORR_THD {0.10, 0.10, 0.10, 0.10, 0.05, 0.10, 0.10, 0.05}
+// the index of the white ball in all of the arrays
+#define WHITE_INDEX 1
 
 // CUE
 
 // whether to run the cue finding in debug mode
-#define CUE_FIND_DEBUG 0
+#define CUE_FIND_DEBUG 1
 
 // the minimal R^2 we want when searching for the cue
 #define CUE_MIN_COEFF 0.985
@@ -33,14 +32,17 @@
 // binary image after the threshold
 #define CUE_OPENING_VAL 1
 // the dilate number of repetitions
-#define CUE_CLOSING_VAL 7
+#define CUE_CLOSING_VAL 6
 // the maximal area of a blob when looking for the blobs. we throw away
 // bigger ones (in px)
 #define CUE_BLOB_MAX_SIZE 100
 // we throw away blobs farther that this from the table (in px)
-#define CUE_BLOB_MAX_DIST_FROM_TABLE 25
+#define CUE_BLOB_MAX_DIST_FROM_TABLE 30
 // the averaging time window when smoothing the cue angle
 #define CUE_SMOOTH_WINDOWS 7000000 // times 100 ns (=0.7s)
+//
+#define BALL_DIAMETER_FOR_CUE_FINDING 35
+#define CUE_FIND_BLACK 0
 
 // MAIN
 
@@ -68,7 +70,7 @@
 #define IS_MOVING_DEBUG 0
 // the length of time we check if there has been movement in before checking
 // if the white moved
-#define IS_MOVING_WINDOW 10000000 // times 100 ns -- 1 sec
+#define IS_MOVING_WINDOW 5000000 // times 100 ns -- 0.5 sec
 // the minimal distance that a white has to move for a "refetch" request to
 // be sent
 #define IS_MOVING_WHITE_DIST 5

@@ -45,6 +45,10 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 							 int max_count, bool custom_norm = false);
 
+// ...
+vector<CvPoint> findPinkOrWhite(IplImage *img, IplImage *templ_p,
+								 IplImage *templ_w, double corr_thd);
+
 /*	Returns an array of the ball templates. */
 IplImage **ballTemplates();
 /*	Returns an array of the ball templates' filenames. */
