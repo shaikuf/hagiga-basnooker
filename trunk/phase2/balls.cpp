@@ -76,8 +76,8 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 		// find the template
 		vector<CvPoint> p;
 
-		if(BALLS_FIND_DEBUG) {
-			cout<<"Finding "<<i<<endl;
+		if(BALLS_FIND_DEBUG || BALLS_CORR_DEBUG) {
+			cout<<"Finding "<<i<<" "<<ballFilenames()[i]<<endl;
 		}
 
 		// actually find the template
@@ -187,6 +187,10 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 			
 		}
 
+		if(!custom_norm && BALLS_CORR_DEBUG) {
+			cout<<"corr="<<max_val<<"\tvs.\t"<<"thd="<<corr_thd<<endl;
+		}
+
 		if(max_val < corr_thd) {
 			// if we're below the correlation threshold, die
 			i = max_count;
@@ -198,6 +202,10 @@ vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 				
 				if(BALLS_FIND_DEBUG) {
 					cout<<"1-mean = "<<max_val-mean<<endl;
+				}
+
+				if(BALLS_CORR_DEBUG) {
+				cout<<"corr="<<max_val-mean<<"\tvs.\t"<<"thd="<<corr_thd<<endl;
 				}
 
 				if(max_val-mean < corr_thd) { // no black ball. not enough variance
@@ -256,6 +264,11 @@ vector<CvPoint> findPinkOrWhite(IplImage *img, IplImage *templ_p,
 	double max_val_p;
 	cvMinMaxLoc(match_w, 0, &max_val_w, 0, &max_p_w, 0);
 	cvMinMaxLoc(match_p, 0, &max_val_p, 0, &max_p_p, 0);
+
+	if(BALLS_CORR_DEBUG) {
+		cout<<"pink:\tcorr="<<max_val_p<<"\tvs.\t"<<corr_thd<<endl;
+		cout<<"white:\tcorr="<<max_val_w<<endl;
+	}
 
 	if(max_val_p >= corr_thd) {
 		// check if it's really the pink or it's actually white

@@ -41,7 +41,7 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 	double m_a, m_b, m_coeff = 0;
 
 	// find the linear regression
-	linearRegression(d_points, &m_a, &m_b, &m_coeff);
+	linearRegression(d_points, &m_a, &m_b, &m_coeff, LINEAR_REGRESSION_METHOD);
 
 	// while it's not good enough and we have enough points:
 	while(m_coeff < min_coeff && d_points.size() >= (unsigned int)(CUE_MIN_BLOBS + ((fix_first)?1:0))) {
@@ -62,7 +62,7 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 		d_points.erase(max_iter);
 
 		// find the new linear regression
-		linearRegression(d_points, &m_a, &m_b, &m_coeff);
+		linearRegression(d_points, &m_a, &m_b, &m_coeff, LINEAR_REGRESSION_METHOD);
 	}
 
 	// if we didn't found a line good enough
@@ -141,7 +141,7 @@ vector<CvPoint> findPointsOnLineByGrowing(const vector<CvPoint2D32f> &points,
 	double m_a, m_b, m_coeff;
 
 	// find the linear regression
-	linearRegression(d_points, &m_a, &m_b, &m_coeff);
+	linearRegression(d_points, &m_a, &m_b, &m_coeff, LINEAR_REGRESSION_METHOD);
 
 	// while it's not good enough and we have enough points:
 	while(m_coeff > 0 && next_blob != sorted_points.end()) {
@@ -150,7 +150,7 @@ vector<CvPoint> findPointsOnLineByGrowing(const vector<CvPoint2D32f> &points,
 		next_blob++;
 
 		// find the new linear regression
-		linearRegression(d_points, &m_a, &m_b, &m_coeff);
+		linearRegression(d_points, &m_a, &m_b, &m_coeff, LINEAR_REGRESSION_METHOD);
 	}
 
 	if(m_coeff > min_coeff) {
@@ -194,17 +194,26 @@ double distFromLine(double x, double y, double m_a, double m_b) {
 }
 
 void linearRegression(vector<CvPoint> points, double *m_a, double *m_b,
-					  double *m_coeff) {
+					  double *m_coeff, int method) {
 	
 	vector<CvPoint2D32f> tmp;
 	vector<CvPoint>::iterator i;
 	for(i=points.begin(); i!=points.end(); i++)
 		tmp.push_back(cvPoint2D32f((double)i->x, (double)i->y));
 
-	linearRegression(tmp, m_a, m_b, m_coeff);
+	linearRegression(tmp, m_a, m_b, m_coeff, method);
 }
 
 void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
+					  double *m_coeff, int method) {
+	if(method == 0) {
+		simpleLinearRegression(points, m_a, m_b, m_coeff);
+	} else if (method == 1) {
+		totalLinearRegression(points, m_a, m_b, m_coeff);
+	}
+}
+
+void simpleLinearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 					  double *m_coeff) {
 	int n = points.size();
 
@@ -233,6 +242,56 @@ void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 	
 	// calculate r^2
 	double s_xy = 0, s_x = 0, s_y = 0, s_x2 = 0, s_y2 = 0;
+	for(int i=0; i<n; i++) {
+		s_xy += points[i].x*points[i].y;
+		s_x += points[i].x;
+		s_y += points[i].y;
+		s_x2 += points[i].x*points[i].x;
+		s_y2 += points[i].y*points[i].y;
+	}
+
+	double r = (n*s_xy - s_x*s_y)/(sqrt(n*s_x2 - s_x*s_x)*sqrt(n*s_y2 - s_y*s_y));
+	*m_coeff = r*r;
+}
+
+
+void totalLinearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
+					  double *m_coeff) {
+	int n = points.size();
+
+	// calculate means
+	double mean_x = 0, mean_y = 0;
+	for(int i=0; i<n; i++) {
+		mean_x += points[i].x;
+		mean_y += points[i].y;
+	}
+	mean_x /= n;
+	mean_y /= n;
+
+	// calculate sums of square differences
+	double s_xx = 0, s_yy = 0, s_xy = 0;
+	for(int i=0; i<n; i++) {
+		double diff_x = points[i].x-mean_x, diff_y = points[i].y-mean_y;
+		s_xx += diff_x*diff_x;
+		s_yy += diff_y*diff_y;
+		s_xy += diff_x*diff_y;
+	}
+	s_xx /= (n-1);
+	s_yy /= (n-1);
+	s_xy /= (n-1);
+
+	double b_1 = (s_yy - s_xx + \
+		pow((double)((s_yy-s_xx)*(s_yy-s_xx) + 4*s_xy*s_xy), (double)0.5)) / \
+		(2*s_xy);
+	double b_0 = mean_y - b_1*mean_x;
+
+	// calculate fit coefficients
+	*m_b = b_1;
+	*m_a = b_0;
+	
+	// calculate r^2
+	s_xy = 0;
+	double s_x = 0, s_y = 0, s_x2 = 0, s_y2 = 0;
 	for(int i=0; i<n; i++) {
 		s_xy += points[i].x*points[i].y;
 		s_x += points[i].x;
