@@ -21,10 +21,13 @@ int main(int argc, char* argv[])
 
 	// get the chosen operating mode from the user
 	cout<<"available modes:\n";
-	cout<<"\t0: normal\n\t1: instance calibration\n\t2: general calibration\n";
-	cout<<"\t3: template grabbing\n\t4: learn edges\n";
-	cout<<"\t5: calibrate correlations\n";
-	cout<<"\t6: calibrate holes\n";
+	cout<<"\t0: normal\n";
+	cout<<"\t1: instance calibration\n";
+	cout<<"\t2: learn edges\n";
+	cout<<"\t3: template grabbing\n";
+	cout<<"\t4: calibrate correlations\n";
+	cout<<"\t5: calibrate holes\n";
+	cout<<"\t6: general calibration\n";
 	cout<<"\t-1: watch with corrections\n";
 
 	int mode;
@@ -32,7 +35,7 @@ int main(int argc, char* argv[])
 		cin>>mode;
 	} while (mode<-1 || mode > 6);
 
-	if(mode == 2) {
+	if(mode == 6) {
 		// calibrate camera
 		calibration(5, 3, 12, 5.8f, 5.8f, resolution, 0);
 	} else if(mode == 1) {
@@ -44,13 +47,13 @@ int main(int argc, char* argv[])
 	} else if(mode == 3) {
 		// grab templates
 		grabTemplates(resolution, 0);
-	} else if(mode == 4) {
+	} else if(mode == 2) {
 		// learn edges
 		learnEdges(false, resolution, 0);
-	} else if(mode == 5) {
+	} else if(mode == 4) {
 		// calibrate correlations
 		calibrateCorrelationThds(resolution, 0);
-	} else if (mode == 6){
+	} else if (mode == 5){
 		//clibrate holes
 		calibrateHoles(resolution,0);
 	}else if(mode == -1) {
