@@ -50,7 +50,10 @@ vector<CvPoint> findPointsOnLineByGrowing(const vector<CvPoint2D32f> &points,
 						(alpha)
 		(double*)m_b	a return variable for the slope of the found line
 						(beta)
-		(double*)m_coeff	a return variable for the appropriate R^2 */
+		(double*)m_coeff	a return variable for the appropriate R^2
+		(int)method		the regression model to compute by. 0 is simple linear
+						regression, and 1 is total linear regression (deming
+						regression) */
 void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 					  double *m_coeff, int method = 0);
 void linearRegression(vector<CvPoint> points, double *m_a, double *m_b,
