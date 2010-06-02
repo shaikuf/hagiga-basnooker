@@ -115,41 +115,21 @@ void markCross(IplImage *img, CvPoint center, CvScalar color) {
 }
 
 void paintHolesBlack(IplImage *img) {
-	CvSeq *borders = tableBorders();
+	static CvPoint p[6];
+	static int radii[6];
+	static bool once = true;
+	if(once) {
+		CvMat* holes = (CvMat*)cvLoad("Hole.xml");
+		for(int i=0; i<6; i++){
+			p[i].x = CV_MAT_ELEM(*holes,int,i,0);
+			p[i].y = CV_MAT_ELEM(*holes,int,i,1);
+			radii[i] = CV_MAT_ELEM(*holes,int,i,2);
+		}
+		once = false;
+	}
 
-	// the hole points are:
-	// (0,0) (0,1), (1/2,-10/375), (1/2, 1+10/375), (1, 0), (1,1)
-
-	CvPoint p0 = *(CvPoint*)cvGetSeqElem(borders, 0); // top-left
-	CvPoint p1 = *(CvPoint*)cvGetSeqElem(borders, 1); // top-right
-	CvPoint p2 = *(CvPoint*)cvGetSeqElem(borders, 2); // bottom-right
-	CvPoint p3 = *(CvPoint*)cvGetSeqElem(borders, 3); // bottom-left
-	
-	int x_delta = 8;
-	int y_delta = 8;
-	int x_delta_top = -6;
-	p0.x -= x_delta + x_delta_top-4;
-	p0.y += 3;
-	p1.x += x_delta + x_delta_top;
-	p1.y += 3;
-	p2.x += x_delta;
-	p2.y += y_delta;
-	p3.x -= x_delta - 10;
-	p3.y += y_delta;
-
-	int y_delta_mid = 8;
-	CvPoint p4 = cvPoint((p0.x + p1.x)/2, (p0.y + p1.y)/2-y_delta_mid);
-		// top-center
-	CvPoint p5 = cvPoint((p2.x + p3.x)/2, (p2.y + p3.y)/2+y_delta_mid);
-		// bottom-center
-
-	int size = 30;
-	cvCircle(img, p0, size, cvScalar(0), -1);
-	cvCircle(img, p1, size, cvScalar(0), -1);
-	cvCircle(img, p2, size, cvScalar(0), -1);
-	cvCircle(img, p3, size, cvScalar(0), -1);
-	cvCircle(img, p4, size, cvScalar(0), -1);
-	cvCircle(img, p5, size, cvScalar(0), -1);
+	for(int i=0; i<6; i++)
+			cvCircle(img, p[i], radii[i], cvScalar(0), -1);
 }
 
 CvRect tableBordersBoundingRect(int offset) {
@@ -199,6 +179,11 @@ bool isMoving(IplImage *img) {
 }
 
 double dist(CvPoint p1, CvPoint p2) {
-	return pow((p1.x - p2.x)*(p1.x - p2.x) +
-		(p1.y - p2.y)*(p1.y - p2.y), 0.5);
+	return pow((double)((p1.x - p2.x)*(p1.x - p2.x) +
+		(p1.y - p2.y)*(p1.y - p2.y)), (double)0.5);
+}
+
+double dist(CvPoint2D32f p1, CvPoint2D32f p2) {
+	return pow((double)((p1.x - p2.x)*(p1.x - p2.x) +
+		(p1.y - p2.y)*(p1.y - p2.y)), (double)0.5);
 }

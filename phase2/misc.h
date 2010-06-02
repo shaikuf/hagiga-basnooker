@@ -92,5 +92,19 @@ bool isMoving(IplImage *img);
 	Returns:
 		(double)	the distance between the points */
 double dist(CvPoint p1, CvPoint p2);
+double dist(CvPoint2D32f p1, CvPoint2D32f p2);
+
+class CompareDist {
+	CvPoint2D32f fixed_p;
+public:
+	CompareDist(CvPoint2D32f foo) {
+		fixed_p.x = foo.x;
+		fixed_p.y = foo.y;
+	}
+
+	bool operator()(const CvPoint2D32f& x, const CvPoint2D32f& y) {
+		return (dist(fixed_p, x) < dist(fixed_p, y));
+	}
+};
 
 #endif

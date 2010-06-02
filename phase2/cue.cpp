@@ -50,6 +50,186 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 	return theta;
 }
 
+bool findCueWithAllMarkers(IplImage *src, CvPoint white_center, double *theta,
+						   vector<CvPoint> *ball_centers, int ball_count) {
+   
+	vector<CvPoint> whites = findBlobs(src, ball_centers, ball_count, true);
+	vector<CvPoint> blacks = findBlobs(src, ball_centers, ball_count, false);
+
+	CvRect roi = tableBordersBoundingRect(-10);
+
+	// create grayscale image
+	IplImage* gray = createBlankCopy(src, 1);
+	cvCvtColor(src, gray, CV_BGR2GRAY);
+
+	paintHolesBlack(gray);
+
+	// paint the balls black so they wont be found
+	for(int i=0; i<ball_count; i++) {
+		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
+			cvCircle(gray, ball_centers[i][j],
+				1, cvScalar(0), BALL_DIAMETER_FOR_CUE_FINDING);
+		}
+	}
+
+	cvSetImageROI(gray, roi);
+
+	// =========================== DEBUG
+	IplImage* color = createBlankCopy(gray, 3);
+	cvCvtColor(gray, color, CV_GRAY2BGR);
+
+	for(unsigned i=0; i<whites.size(); i++) {
+		cvCircle(color, cvPoint((int)whites[i].x - roi.x,
+				(int)whites[i].y - roi.y), 1, cvScalar(255, 0, 0), 3);
+	}
+	for(unsigned i=0; i<blacks.size(); i++) {
+			cvCircle(color, cvPoint((int)blacks[i].x - roi.x,
+				(int)blacks[i].y - roi.y), 1, cvScalar(0, 0, 255), 3);
+	}
+
+	cvNamedWindow("cue");
+	cvShowImage("cue", color);
+	// =========================== DEBUG
+
+	//whites.insert(whites.begin(), white_center);
+
+	// for every two white points
+	vector<CvPoint>::iterator i, j, k;
+	for(i = whites.begin(); i != whites.end(); i++) {
+		vector<CvPoint> tmp;
+			tmp.push_back(white_center);
+			tmp.push_back(*i);
+			double m_a, m_b, m_coeff;
+		for(j = i+1; j != whites.end(); j++) {
+			// fit these two points and the white ball
+			tmp.push_back(*j);
+			linearRegression(tmp, &m_a, &m_b, &m_coeff);
+			if(m_coeff > CUE_MIN_COEFF) {
+				// this is actually a line
+				// check if there's a black close to it
+				for(k = blacks.begin(); k != blacks.end(); k++) {
+
+				}
+			}
+			tmp.pop_back();
+		}
+	}
+
+	cvReleaseImage(&gray);
+	cvReleaseImage(&color);
+
+	return false;
+}
+
+vector<CvPoint> findBlobs(IplImage *src, vector<CvPoint> *ball_centers,
+							   int ball_count, bool white) {
+
+	CvRect roi = tableBordersBoundingRect((white)?
+		CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE:\
+		CUE_BLACK_BLOB_MAX_DIST_FROM_TABLE);
+
+	// create grayscale image
+	IplImage* gray = createBlankCopy(src, 1);
+	cvCvtColor(src, gray, CV_BGR2GRAY);
+
+	if(!white)
+		cvAbsDiffS(gray, gray, cvScalar(255));
+	paintHolesBlack(gray);
+
+	// paint the balls black so they wont be found
+	for(int i=0; i<ball_count; i++) {
+		for(unsigned int j=0; j<ball_centers[i].size(); j++) {
+			cvCircle(gray, ball_centers[i][j],
+				1, cvScalar(0), BALL_DIAMETER_FOR_CUE_FINDING);
+		}
+	}
+
+	cvSetImageROI(gray, roi);
+
+	// threshold to leave only white markers
+	IplImage* thresh = createBlankCopy(gray);
+	cvThreshold(gray, thresh, CUE_THRESH_VAL, 255, CV_THRESH_BINARY);
+
+	if(white) {
+		cvNamedWindow("thresh");
+		cvShowImage("thresh", thresh);
+	}
+
+	// morphological operations:
+	IplImage *morph = cvCloneImage(thresh);
+	IplImage *morph_marked = 0;
+
+		// remove small objects
+	cvErode(morph, morph, 0, (white)?CUE_OPENING_VAL_WHITE:\
+		CUE_OPENING_VAL_BLACK);
+	cvDilate(morph, morph, 0, (white)?CUE_OPENING_VAL_WHITE:\
+		CUE_OPENING_VAL_BLACK);
+
+		// merge large objects
+	cvDilate(morph, morph, 0, (white)?CUE_CLOSING_VAL_WHITE:\
+		CUE_CLOSING_VAL_BLACK);
+	cvErode(morph, morph, 0, (white)?CUE_CLOSING_VAL_WHITE:\
+		CUE_CLOSING_VAL_BLACK);
+
+	// find the contours
+	IplImage* temp = cvCloneImage(morph);
+
+	CvMemStorage *mem_storage = cvCreateMemStorage(0);
+	CvSeq* contours = NULL;
+
+		// actually find the contours
+	CvContourScanner scanner = cvStartFindContours(temp, mem_storage, \
+		sizeof(CvContour), CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+
+		// filter/approximate the blobs
+	CvSeq* c;
+	int numCont = 0;
+	while( (c = cvFindNextContour( scanner )) != NULL ) {
+		double len = cvContourPerimeter( c );
+
+		if( len > ((white)?CUE_BLOB_MAX_SIZE_WHITE:\
+			CUE_BLOB_MAX_SIZE_BLACK) ) { // get rid of big blobs
+			cvSubstituteContour( scanner, NULL );
+		} else { // polynomial approximation
+			CvSeq* c_new;
+
+			c_new = cvApproxPoly(c, sizeof(CvContour), mem_storage,
+				CV_POLY_APPROX_DP, 1, 0);
+
+			cvSubstituteContour( scanner, c_new );
+			numCont++;
+		}
+	}
+	contours = cvEndFindContours( &scanner );
+
+		// find the blob centers
+	int i;
+	vector<CvPoint> centers;
+	CvMoments moments;
+	double M00, M01, M10;
+
+	for(i=0, c=contours; c != NULL; c = c->h_next, i++) {
+		cvContourMoments(c, &moments);
+
+		M00 = cvGetSpatialMoment(&moments,0,0);
+		M10 = cvGetSpatialMoment(&moments,1,0);
+		M01 = cvGetSpatialMoment(&moments,0,1);
+		centers.push_back(cvPoint((int)(M10/M00) + roi.x,
+			(int)(M01/M00) + roi.y));
+	}
+
+	// release stuff
+	cvReleaseMemStorage(&mem_storage);
+
+	cvReleaseImage(&gray);
+	cvReleaseImage(&thresh);
+	cvReleaseImage(&morph);
+	cvReleaseImage(&morph_marked);
+	cvReleaseImage(&temp);
+
+	return centers;
+}
+
 bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 							 vector<CvPoint> *ball_centers, int balls_count) {
 	static bool once = true;
@@ -61,7 +241,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		once = false;
 	}
 
-	CvRect roi = tableBordersBoundingRect(CUE_BLOB_MAX_DIST_FROM_TABLE);
+	CvRect roi = tableBordersBoundingRect(CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE);
 
 	// create grayscale image
 	IplImage* gray = createBlankCopy(src, 1);
@@ -100,12 +280,12 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	IplImage *morph_marked = 0;
 
 		// remove small objects
-	cvErode(morph, morph, 0, CUE_OPENING_VAL);
-	cvDilate(morph, morph, 0, CUE_OPENING_VAL);
+	cvErode(morph, morph, 0, CUE_OPENING_VAL_WHITE);
+	cvDilate(morph, morph, 0, CUE_OPENING_VAL_WHITE);
 
 		// merge large objects
-	cvDilate(morph, morph, 0, CUE_CLOSING_VAL);
-	cvErode(morph, morph, 0, CUE_CLOSING_VAL);
+	cvDilate(morph, morph, 0, CUE_CLOSING_VAL_WHITE);
+	cvErode(morph, morph, 0, CUE_CLOSING_VAL_WHITE);
 
 	if(CUE_FIND_DEBUG) {
 		cvShowImage("morphed", morph);
@@ -129,7 +309,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	while( (c = cvFindNextContour( scanner )) != NULL ) {
 		double len = cvContourPerimeter( c );
 
-		if( len > CUE_BLOB_MAX_SIZE ) { // get rid of big blobs
+		if( len > CUE_BLOB_MAX_SIZE_WHITE ) { // get rid of big blobs
 			cvSubstituteContour( scanner, NULL );
 		} else { // polynomial approximation
 			CvSeq* c_new;
@@ -158,6 +338,16 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		centers.push_back(cvPoint2D32f((M10/M00),(M01/M00)));
 	}
 
+	// lose the far points
+	vector<CvPoint2D32f>::iterator itr;
+	for(itr = centers.begin(); itr != centers.end();) {
+		if(dist(white_center, cvPoint((int)itr->x, (int)itr->y)) > MAX_BLOB_DIST_FROM_WHITE) {
+			itr = centers.erase(itr);
+		} else {
+			itr++;
+		}
+	}
+
 		// mark them on the debug image
 	if(CUE_FIND_DEBUG) {
 		for(unsigned i=0; i<centers.size(); i++) {
@@ -171,7 +361,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	double cue_m;
 	CvPoint cue_cm;
 
-	vector<CvPoint> real_centers = findPointsOnLine(centers, CUE_MIN_COEFF,
+	vector<CvPoint> real_centers = findPointsOnLineWith(white_center, centers, CUE_MIN_COEFF,
 		&cue_m, &cue_n, &cue_cm);
 
 	// perhaps filter the line

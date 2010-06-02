@@ -20,7 +20,8 @@
 #define CUE_FIND_DEBUG 1
 
 // the minimal R^2 we want when searching for the cue
-#define CUE_MIN_COEFF 0.985
+#define CUE_MIN_COEFF 0.992
+#define CUE_MIN_COEFF_3_PTS 0.985
 // the minimal number of blobs we want when searching for the cue
 #define CUE_MIN_BLOBS 2
 // the maximal distance of the white ball from the fitted cue line. if it is
@@ -30,19 +31,24 @@
 #define CUE_THRESH_VAL 220
 // the erode number of repetitions when morphologically filtering the
 // binary image after the threshold
-#define CUE_OPENING_VAL 1
+#define CUE_OPENING_VAL_WHITE 1
+#define CUE_OPENING_VAL_BLACK 2
 // the dilate number of repetitions
-#define CUE_CLOSING_VAL 6
+#define CUE_CLOSING_VAL_WHITE 6
+#define CUE_CLOSING_VAL_BLACK 6
 // the maximal area of a blob when looking for the blobs. we throw away
 // bigger ones (in px)
-#define CUE_BLOB_MAX_SIZE 100
+#define CUE_BLOB_MAX_SIZE_WHITE 100
+#define CUE_BLOB_MAX_SIZE_BLACK 100
 // we throw away blobs farther that this from the table (in px)
-#define CUE_BLOB_MAX_DIST_FROM_TABLE 30
+#define CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE 30
+#define CUE_BLACK_BLOB_MAX_DIST_FROM_TABLE -10
 // the averaging time window when smoothing the cue angle
 #define CUE_SMOOTH_WINDOWS 7000000 // times 100 ns (=0.7s)
 //
 #define BALL_DIAMETER_FOR_CUE_FINDING 35
 #define CUE_FIND_BLACK 0
+#define MAX_BLOB_DIST_FROM_WHITE 300
 
 // MAIN
 
