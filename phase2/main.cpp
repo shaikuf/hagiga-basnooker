@@ -223,8 +223,11 @@ void gameLoop(CvSize resolution, int device_id) {
 				}
 
 				// check if we're frozen for X time
-				if(cur_time - freeze_time > IS_MOVING_WINDOW && !checked_white) {
-					// check if the white moved
+				if(cur_time - freeze_time > IS_MOVING_WINDOW &&
+					!checked_white) {
+
+					// check if the white moved (actually we look for the pink
+					// too because i'm lazy)
 					vector<CvPoint> new_white[2];
 					findBalls(image, ball_templates, ball_counts,
 						ball_inv_templ, ball_thd, new_white,

@@ -4,8 +4,9 @@
 
 // BALLS
 
-// whether to run the balls finding in debug mode
+// whether or not to run the balls finding in debug mode
 #define BALLS_FIND_DEBUG 0
+// whether or not to print the found correlation, every time we look for balls
 #define BALLS_CORR_DEBUG 1
 // the offset outside the calibrated borders that we look for the balls in
 #define BOUNDING_RECT_OFFSET 5
@@ -17,12 +18,11 @@
 
 // CUE
 
-// whether to run the cue finding in debug mode
+// whether or not to run the cue finding in debug mode
 #define CUE_FIND_DEBUG 1
 
 // the minimal R^2 we want when searching for the cue
 #define CUE_MIN_COEFF 0.992
-#define CUE_MIN_COEFF_3_PTS 0.985
 // the minimal number of blobs we want when searching for the cue
 #define CUE_MIN_BLOBS 2
 // the maximal distance of the white ball from the fitted cue line. if it is
@@ -42,15 +42,18 @@
 #define CUE_BLOB_MAX_SIZE_WHITE 100
 #define CUE_BLOB_MAX_SIZE_BLACK 100
 // we throw away blobs farther that this from the table (in px)
-#define CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE 40
-#define CUE_BLACK_BLOB_MAX_DIST_FROM_TABLE -10
+#define CUE_BLOB_MAX_DIST_FROM_TABLE_WHITE 40
+#define CUE_BLOB_MAX_DIST_FROM_TABLE_BLACK -10
+// the maximal distance for a blob from the white (more than that and it's
+// ignored)
+#define MAX_BLOB_DIST_FROM_WHITE 300
 // the averaging time window when smoothing the cue angle
 #define CUE_SMOOTH_WINDOWS 7000000 // times 100 ns (=0.7s)
-//
+// the ball diameter we draw black on when trying to find the cue
 #define BALL_DIAMETER_FOR_CUE_FINDING 35
-#define CUE_FIND_BLACK 0
-#define MAX_BLOB_DIST_FROM_WHITE 300
 // linear regression method
+//	0. simple linear regression
+//	1. total linear regression
 #define LINEAR_REGRESSION_METHOD 1
 
 // MAIN

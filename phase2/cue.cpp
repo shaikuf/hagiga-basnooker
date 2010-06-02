@@ -131,8 +131,8 @@ vector<CvPoint> findBlobs(IplImage *src, vector<CvPoint> *ball_centers,
 
 	// set relevant ROI
 	CvRect roi = tableBordersBoundingRect((white)?
-		CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE:\
-		CUE_BLACK_BLOB_MAX_DIST_FROM_TABLE);
+		CUE_BLOB_MAX_DIST_FROM_TABLE_WHITE:\
+		CUE_BLOB_MAX_DIST_FROM_TABLE_BLACK);
 
 	// create grayscale image
 	IplImage* gray = createBlankCopy(src, 1);
@@ -245,7 +245,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		once = false;
 	}
 
-	CvRect roi = tableBordersBoundingRect(CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE);
+	CvRect roi = tableBordersBoundingRect(CUE_BLOB_MAX_DIST_FROM_TABLE_WHITE);
 
 	// create grayscale image
 	IplImage* gray = createBlankCopy(src, 1);
