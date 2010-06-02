@@ -6,11 +6,12 @@
 
 // whether to run the balls finding in debug mode
 #define BALLS_FIND_DEBUG 0
+#define BALLS_CORR_DEBUG 1
 // the offset outside the calibrated borders that we look for the balls in
 #define BOUNDING_RECT_OFFSET 5
 // the threshold below the calibrated correlation we want to say that a ball
 // was found
-#define BALL_CORR_THD {0.10, 0.10, 0.10, 0.10, 0.05, 0.10, 0.10, 0.05}
+#define BALL_CORR_THD {0.5, 0.5, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10}
 // the index of the white ball in all of the arrays
 #define WHITE_INDEX 1
 
@@ -34,14 +35,14 @@
 #define CUE_OPENING_VAL_WHITE 1
 #define CUE_OPENING_VAL_BLACK 2
 // the dilate number of repetitions
-#define CUE_CLOSING_VAL_WHITE 6
+#define CUE_CLOSING_VAL_WHITE 8
 #define CUE_CLOSING_VAL_BLACK 6
 // the maximal area of a blob when looking for the blobs. we throw away
 // bigger ones (in px)
 #define CUE_BLOB_MAX_SIZE_WHITE 100
 #define CUE_BLOB_MAX_SIZE_BLACK 100
 // we throw away blobs farther that this from the table (in px)
-#define CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE 30
+#define CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE 40
 #define CUE_BLACK_BLOB_MAX_DIST_FROM_TABLE -10
 // the averaging time window when smoothing the cue angle
 #define CUE_SMOOTH_WINDOWS 7000000 // times 100 ns (=0.7s)
@@ -49,6 +50,8 @@
 #define BALL_DIAMETER_FOR_CUE_FINDING 35
 #define CUE_FIND_BLACK 0
 #define MAX_BLOB_DIST_FROM_WHITE 300
+// linear regression method
+#define LINEAR_REGRESSION_METHOD 1
 
 // MAIN
 

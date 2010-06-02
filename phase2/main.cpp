@@ -194,7 +194,7 @@ void gameLoop(CvSize resolution, int device_id) {
 					theta = smoothTheta(theta);
 					tcp_server.send_theta(theta);
 				} else {
-					tcp_server.send_raw("n");
+					tcp_server.send_raw("n\n");
 				}
 			}
 		}

@@ -40,8 +40,12 @@ vector<CvPoint> findPointsOnLineByGrowing(const vector<CvPoint2D32f> &points,
 						(beta)
 		(double*)m_coeff	a return variable for the appropriate R^2 */
 void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
-					  double *m_coeff);
+					  double *m_coeff, int method = 0);
 void linearRegression(vector<CvPoint> points, double *m_a, double *m_b,
+					  double *m_coeff, int method = 0);
+void simpleLinearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
+					  double *m_coeff);
+void totalLinearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
 					  double *m_coeff);
 
 /*	Finds the distance between a point (x,y) and a line: y = m_a + m_b*x
