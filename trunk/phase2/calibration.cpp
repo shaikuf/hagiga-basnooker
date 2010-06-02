@@ -891,3 +891,120 @@ void watch(bool with_birds_eye, CvSize resolution, int device_id) {
 	capture.stop();
 	cvDestroyWindow("Live View");
 }
+
+
+
+void calibrateHoles(CvSize resolution, int device_id){
+	// init camera
+	VideoCapture capture(0, resolution.width, resolution.height);
+	IplImage *pre_image = capture.CreateCaptureImage();
+	IplImage *image = capture.CreateCaptureImage();
+
+
+	cvNamedWindow("Holes", CV_WINDOW_AUTOSIZE);
+
+	// capture a frame
+	capture.waitFrame(pre_image);
+
+	// fix the perspective on the image
+	char filename[100];
+	_snprintf_s(filename, 100, "H-%d.xml", device_id);
+	CvMat* H = (CvMat*)cvLoad(filename);
+
+	cvWarpPerspective(pre_image, image,	H,
+		CV_INTER_LINEAR | CV_WARP_INVERSE_MAP | CV_WARP_FILL_OUTLIERS);
+
+	cvReleaseMat(&H);
+
+	IplImage *cpy_image = createBlankCopy(image);
+	cvCopy(image, cpy_image);
+
+	//draw the circls for the first time
+	//initilizr the circls positions
+	CvPoint p[6];
+	int radius[6] ;//= {30,30,30,30,30,30};
+	CvMat* holes = (CvMat*)cvLoad("Hole.xml");
+	for(int i=0; i<6; i++){
+		p[i].x = CV_MAT_ELEM(*holes,int,i,0);
+		p[i].y = CV_MAT_ELEM(*holes,int,i,1);
+		radius[i] = CV_MAT_ELEM(*holes,int,i,2);
+	}
+	/*CvSeq *borders = tableBorders();
+	p[0] = *(CvPoint*)cvGetSeqElem(borders, 0); // top-left
+	p[2] = *(CvPoint*)cvGetSeqElem(borders, 1); // top-right
+	p[3] = *(CvPoint*)cvGetSeqElem(borders, 2); // bottom-right
+	p[5] = *(CvPoint*)cvGetSeqElem(borders, 3); // bottom-left
+	
+	p[1] = cvPoint((p[0].x + p[2].x)/2, (p[0].y + p[2].y)/2);
+		// top-center
+	p[4] = cvPoint((p[5].x + p[3].x)/2, (p[5].y + p[3].y)/2);
+		// bottom-center*/
+	
+	//draw the circls
+	for(int i=0; i<6; i++)
+		cvCircle(cpy_image, p[i], radius[i], cvScalar(0), -1);
+
+
+	// show the image
+	cvShowImage("Holes", cpy_image);
+
+	int c=0;
+
+	cout<<"choose a hole to fix:\n1:top-left\n2:top-center\n"
+			<<"3:top-right\n4:bottom-right\n5:bottom-center\n"
+			<<"6:bottom-left"<<endl;
+
+	c = cvWaitKey(0)-'1';
+	while(c>=0 && c<6) {
+		drawHolesOnImage(image,cpy_image,c,p,radius);
+		c = cvWaitKey(0)-'1';
+	}
+
+	//CvMat *holes = cvCreateMat(6, 3, CV_32S); //save the holes center and radiu
+	for(int i=0; i<6; i++){
+		CV_MAT_ELEM(*holes,int,i,0) = p[i].x;
+		CV_MAT_ELEM(*holes,int,i,1) = p[i].y;
+		CV_MAT_ELEM(*holes,int,i,2) = radius[i];
+	}
+
+	cvSave("Hole.xml", holes);
+	cvReleaseImage(&image);
+	cvReleaseImage(&cpy_image);
+	cvReleaseImage(&pre_image);
+}
+
+void drawHolesOnImage(IplImage *image,IplImage *cpy_image,int index,CvPoint p[], int r[]){
+	int delta_x=1,delta_y=1;
+	
+	int key = cvWaitKey();
+	while(key!=27){//while 'esc' not pressed
+		switch(key){
+			case 'i'://move up
+				p[index].y -= delta_y;
+				break;
+			case 'k'://move down
+				p[index].y += delta_y;
+				break;
+			case 'j'://move left
+				p[index].x -= delta_x;
+				break;
+			case 'l'://move right
+				p[index].x += delta_x;
+				break;
+			case 'a'://increas radius
+				r[index] += 1;
+				break;
+			case 's'://decreas radius
+				r[index] -= 1;
+				break;
+		}
+		//draw the circls
+		cvCopy(image,cpy_image);
+		for(int i=0; i<6; i++)
+			cvCircle(cpy_image, p[i], r[i], cvScalar(0), -1);
+
+		cvShowImage("Holes",cpy_image);
+
+		key = cvWaitKey(0);
+	}
+}

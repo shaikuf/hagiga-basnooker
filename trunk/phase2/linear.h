@@ -20,7 +20,15 @@ using namespace std;
 		(vector<CvPoint>)	the vector of the subset of points */
 vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 								 double min_coeff, double *line_m,
-								 double *line_n, CvPoint *line_cm);
+								 double *line_n, CvPoint *line_cm,
+								 bool fix_first = false);
+vector<CvPoint> findPointsOnLineWith(CvPoint fixed_pt,
+									const vector<CvPoint2D32f> &points,
+									double min_coeff, double *line_m,
+									double *line_n, CvPoint *line_cm);
+vector<CvPoint> findPointsOnLineByGrowing(const vector<CvPoint2D32f> &points,
+										  double min_coeff, double *line_m,
+										  double *line_n, CvPoint *line_cm);
 
 /*	Finds the line parameters and R^2 coefficient for a simple linear
 	regression of the given vector of points.
@@ -32,6 +40,8 @@ vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 						(beta)
 		(double*)m_coeff	a return variable for the appropriate R^2 */
 void linearRegression(vector<CvPoint2D32f> points, double *m_a, double *m_b,
+					  double *m_coeff);
+void linearRegression(vector<CvPoint> points, double *m_a, double *m_b,
 					  double *m_coeff);
 
 /*	Finds the distance between a point (x,y) and a line: y = m_a + m_b*x

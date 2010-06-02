@@ -137,6 +137,11 @@ void fixCoordinates(int &x, int &y, CvSize resolution);
 		(int)device_id		the id of the camera to use */
 void watch(bool with_birds_eye, CvSize resolution, int device_id);
 
+
+void calibrateHoles(CvSize resolution, int device_id);
+void drawHolesOnImage(IplImage *image,IplImage *cpy_image,int index,CvPoint p[], int r[]);
+
+
 /* A struct used to pass more parameters to mouse handlers */
 struct seq_data {
 	IplImage *img;

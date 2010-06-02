@@ -24,12 +24,13 @@ int main(int argc, char* argv[])
 	cout<<"\t0: normal\n\t1: instance calibration\n\t2: general calibration\n";
 	cout<<"\t3: template grabbing\n\t4: learn edges\n";
 	cout<<"\t5: calibrate correlations\n";
+	cout<<"\t6: calibrate holes\n";
 	cout<<"\t-1: watch with corrections\n";
 
 	int mode;
 	do {
 		cin>>mode;
-	} while (mode<-1 || mode > 5);
+	} while (mode<-1 || mode > 6);
 
 	if(mode == 2) {
 		// calibrate camera
@@ -49,7 +50,10 @@ int main(int argc, char* argv[])
 	} else if(mode == 5) {
 		// calibrate correlations
 		calibrateCorrelationThds(resolution, 0);
-	} else if(mode == -1) {
+	} else if (mode == 6){
+		//clibrate holes
+		calibrateHoles(resolution,0);
+	}else if(mode == -1) {
 		// watch with corrections
 		watch(true, resolution, 0);
 	}
@@ -181,11 +185,16 @@ void gameLoop(CvSize resolution, int device_id) {
 				found_cue = findCueWithWhiteMarkers(image,
 					ball_centers[WHITE_INDEX].front(), &theta, ball_centers,
 					NUM_BALLS);
+				/*found_cue = findCueWithAllMarkers(image,
+					ball_centers[WHITE_INDEX].front(), &theta, ball_centers,
+					NUM_BALLS);*/
 
 				if(found_cue) {
 					// smooth and send to client
 					theta = smoothTheta(theta);
 					tcp_server.send_theta(theta);
+				} else {
+					tcp_server.send_raw("n");
 				}
 			}
 		}
@@ -254,6 +263,8 @@ void gameLoop(CvSize resolution, int device_id) {
 		}
 		cvShowImage("Game", image);
 		c=cvWaitKey(50);
+		if(c==' ')
+			find_balls = true;
 	}
 
 	// release stuff

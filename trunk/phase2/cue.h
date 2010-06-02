@@ -36,4 +36,10 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		(double)	an averaging of the last given theta */
 double smoothTheta(double new_theta);
 
+bool findCueWithAllMarkers(IplImage *src, CvPoint white_center, double *theta,
+						   vector<CvPoint> *ball_centers, int ball_count);
+
+vector<CvPoint> findBlobs(IplImage *src, vector<CvPoint> *ball_centers,
+							   int ball_count, bool white);
+
 #endif
