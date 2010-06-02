@@ -18,7 +18,6 @@ vector<CvPoint> findPointsOnLineWith(CvPoint fixed_pt,
 	tmp.insert(tmp.begin(), cvPoint2D32f((double)fixed_pt.x,
 		(double)fixed_pt.y));
 	return findPointsOnLine(tmp, min_coeff, line_m, line_n, line_cm, true);
-	//return findPointsOnLineByGrowing(tmp, min_coeff, line_m, line_n, line_cm);
 }
 
 vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,

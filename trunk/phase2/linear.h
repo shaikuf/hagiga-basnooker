@@ -7,7 +7,9 @@
 using namespace std;
 
 /*	Finds a subset of points which reside on a line with some minimal R^2
-	coefficient, and the line parameters.
+	coefficient, and the line parameters. The greedy algorithm tries to
+	fit all of the points, and then dumps the point furthest from the fitted
+	line, until we can fit our set of points with the minimal R^2 required */
 	Gets:
 		(const vector<CvPoint2D32f>&)points		the given set of points
 		(double)min_coeff	the minimal R^2 coefficient
@@ -16,16 +18,26 @@ using namespace std;
 							line
 		(CvPoint*)line_cm	a return variable for the center of mass of the
 							found line
+		(bool)fix_first		whether or not to keep the first point in the
+							vector fixed in the model (it is 100% on the line)
 	Returns:
 		(vector<CvPoint>)	the vector of the subset of points */
 vector<CvPoint> findPointsOnLine(const vector<CvPoint2D32f> &points,
 								 double min_coeff, double *line_m,
 								 double *line_n, CvPoint *line_cm,
 								 bool fix_first = false);
+
+/*	This is a wrapper for findPointsOnLine() which adds the additional
+	(CvPoint)fixed_pt to the beginning of the vector and keeps it fixed
+	in the regression */
 vector<CvPoint> findPointsOnLineWith(CvPoint fixed_pt,
 									const vector<CvPoint2D32f> &points,
 									double min_coeff, double *line_m,
 									double *line_n, CvPoint *line_cm);
+
+/*	This tries another greedy algorithm which has the first two points in the
+	vector fixed, and tries to add the closest point to the line, until we add
+	a point which brings the R^2 below the required threshold. */
 vector<CvPoint> findPointsOnLineByGrowing(const vector<CvPoint2D32f> &points,
 										  double min_coeff, double *line_m,
 										  double *line_n, CvPoint *line_cm);

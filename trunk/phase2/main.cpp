@@ -185,9 +185,6 @@ void gameLoop(CvSize resolution, int device_id) {
 				found_cue = findCueWithWhiteMarkers(image,
 					ball_centers[WHITE_INDEX].front(), &theta, ball_centers,
 					NUM_BALLS);
-				/*found_cue = findCueWithAllMarkers(image,
-					ball_centers[WHITE_INDEX].front(), &theta, ball_centers,
-					NUM_BALLS);*/
 
 				if(found_cue) {
 					// smooth and send to client
