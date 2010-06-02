@@ -116,6 +116,30 @@ void calibrateCorrelationThds(CvSize resolution, int device_id);
 
 // ==============================================
 // ==============================================
+// HOLES CALIBRATION
+
+/*	This lets the user set the positions of the holes of the table, in order
+	for the cue finding to work (the white nets in the holes pose a problem to
+	it). You choose a hole with the keys 1-6 (see the console when running),
+	move it around with i,j,k,l, and scale it with s,d. After that you press
+	esc and choose the next hole. When done, press esc again and it will be
+	saved.
+	Gets:
+		(CvSize)resolution	the resolution of the camera to use
+		(int)device_id		the id of the camera to use */
+void calibrateHoles(CvSize resolution, int device_id);
+
+/*	This is a helper function for calibrateHoles. This one actually does all
+	of the described work.
+	Gets:
+		(IplImage*)image	the image captured from the camera
+		(int)index			the hole we're working on
+		(CvPoint*)p			the positions of the holes
+		(int*)r				the radii of the holes */
+void drawHolesOnImage(IplImage *image, int index, CvPoint p[], int r[]);
+
+// ==============================================
+// ==============================================
 // MISC
 
 /* this fixes the mouse coordinates according to the image resolution */
@@ -136,11 +160,6 @@ void fixCoordinates(int &x, int &y, CvSize resolution);
 		(CvSize)resolution	the resolution of the camera to use
 		(int)device_id		the id of the camera to use */
 void watch(bool with_birds_eye, CvSize resolution, int device_id);
-
-
-void calibrateHoles(CvSize resolution, int device_id);
-void drawHolesOnImage(IplImage *image,IplImage *cpy_image,int index,CvPoint p[], int r[]);
-
 
 /* A struct used to pass more parameters to mouse handlers */
 struct seq_data {

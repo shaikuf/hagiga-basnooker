@@ -40,7 +40,7 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 		}
 	}
 
-	// mode 2*PI;
+	// mod 2*PI;
 	theta = theta;
 	if(theta >= 2*PI)
 		theta -= 2*PI;
@@ -52,11 +52,14 @@ double line2theta(double cue_m, CvPoint cue_cm, CvPoint white_center) {
 
 bool findCueWithAllMarkers(IplImage *src, CvPoint white_center, double *theta,
 						   vector<CvPoint> *ball_centers, int ball_count) {
+
+	/* THESE FUNCTION IS NOT COMPLETE. IN THE END WE DECIDED TO GO ONLY WITH
+	WHITE BLOBS, AFTER SWITCHING TO TOTAL LEAST SQUARES REGRESSION MODEL,
+	USING THE GLOVE AND PLAYING WITH THE PARAMETERS */
    
+	// find the blobs
 	vector<CvPoint> whites = findBlobs(src, ball_centers, ball_count, true);
 	vector<CvPoint> blacks = findBlobs(src, ball_centers, ball_count, false);
-
-	CvRect roi = tableBordersBoundingRect(-10);
 
 	// create grayscale image
 	IplImage* gray = createBlankCopy(src, 1);
@@ -72,6 +75,8 @@ bool findCueWithAllMarkers(IplImage *src, CvPoint white_center, double *theta,
 		}
 	}
 
+	// set ROI
+	CvRect roi = tableBordersBoundingRect(-10);
 	cvSetImageROI(gray, roi);
 
 	// =========================== DEBUG
@@ -124,6 +129,7 @@ bool findCueWithAllMarkers(IplImage *src, CvPoint white_center, double *theta,
 vector<CvPoint> findBlobs(IplImage *src, vector<CvPoint> *ball_centers,
 							   int ball_count, bool white) {
 
+	// set relevant ROI
 	CvRect roi = tableBordersBoundingRect((white)?
 		CUE_WHITE_BLOB_MAX_DIST_FROM_TABLE:\
 		CUE_BLACK_BLOB_MAX_DIST_FROM_TABLE);
@@ -132,8 +138,9 @@ vector<CvPoint> findBlobs(IplImage *src, vector<CvPoint> *ball_centers,
 	IplImage* gray = createBlankCopy(src, 1);
 	cvCvtColor(src, gray, CV_BGR2GRAY);
 
-	if(!white)
+	if(!white) // if looking for black -- inverse
 		cvAbsDiffS(gray, gray, cvScalar(255));
+
 	paintHolesBlack(gray);
 
 	// paint the balls black so they wont be found
@@ -149,11 +156,6 @@ vector<CvPoint> findBlobs(IplImage *src, vector<CvPoint> *ball_centers,
 	// threshold to leave only white markers
 	IplImage* thresh = createBlankCopy(gray);
 	cvThreshold(gray, thresh, CUE_THRESH_VAL, 255, CV_THRESH_BINARY);
-
-	if(white) {
-		cvNamedWindow("thresh");
-		cvShowImage("thresh", thresh);
-	}
 
 	// morphological operations:
 	IplImage *morph = cvCloneImage(thresh);
@@ -214,6 +216,8 @@ vector<CvPoint> findBlobs(IplImage *src, vector<CvPoint> *ball_centers,
 		M00 = cvGetSpatialMoment(&moments,0,0);
 		M10 = cvGetSpatialMoment(&moments,1,0);
 		M01 = cvGetSpatialMoment(&moments,0,1);
+
+		// put in the output array
 		centers.push_back(cvPoint((int)(M10/M00) + roi.x,
 			(int)(M01/M00) + roi.y));
 	}
@@ -247,8 +251,6 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 	IplImage* gray = createBlankCopy(src, 1);
 	cvCvtColor(src, gray, CV_BGR2GRAY);
 
-	if(CUE_FIND_BLACK)
-		cvAbsDiffS(gray, gray, cvScalar(255));
 	paintHolesBlack(gray);
 
 	// paint the balls black so they wont be found
@@ -338,7 +340,7 @@ bool findCueWithWhiteMarkers(IplImage *src, CvPoint white_center, double *theta,
 		centers.push_back(cvPoint2D32f((M10/M00),(M01/M00)));
 	}
 
-	// lose the far points
+	// lose the far points (from the white ball)
 	vector<CvPoint2D32f>::iterator itr;
 	for(itr = centers.begin(); itr != centers.end();) {
 		if(dist(white_center, cvPoint((int)itr->x, (int)itr->y)) > MAX_BLOB_DIST_FROM_WHITE) {

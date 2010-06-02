@@ -117,6 +117,7 @@ void markCross(IplImage *img, CvPoint center, CvScalar color) {
 void paintHolesBlack(IplImage *img) {
 	static CvPoint p[6];
 	static int radii[6];
+
 	static bool once = true;
 	if(once) {
 		CvMat* holes = (CvMat*)cvLoad("Hole.xml");

@@ -31,7 +31,7 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 						 double ball_thds[], vector<CvPoint> ball_centers[],
 						 int n_balls);
 
-/* Find the points which best matches a template
+/*	Find the points which best matches a template
 	Gets:
 		(IplImage*) img		the image to search on
 		(IplImage*) templ	the template to search for
@@ -45,7 +45,15 @@ void findBalls(IplImage *img, IplImage *ball_templates[],
 vector<CvPoint> findTemplate(IplImage *img, IplImage *templ, double corr_thd,
 							 int max_count, bool custom_norm = false);
 
-// ...
+/*	Trys to find the pink ball, as always, but double-checks that it didn't
+	find the white ball by accident, because their templates are similar.
+	Gets:
+		(IplImage*)			the image to search on
+		(IplImage*)templ_p	the template of the pink ball
+		(IplImage*)templ_w	the template of the white ball
+		(double)corr_thd	the correlation threshold we look for the pink
+							with */
+
 vector<CvPoint> findPinkOrWhite(IplImage *img, IplImage *templ_p,
 								 IplImage *templ_w, double corr_thd);
 
@@ -67,7 +75,8 @@ bool* ballInverseTempls();
 	over TCP to the GUI application. */
 char* ballTCPPrefixes();
 
-/*	Computes an array of the correlations when finding each ball template.
+/*	Computes an array of the maximum correlations found when finding each ball
+	template.
 	Gets:
 		(IplImage*) img				the image we search on
 		(IplImage**) ball_templates	the templates we search for

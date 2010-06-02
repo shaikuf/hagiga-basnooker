@@ -94,6 +94,7 @@ bool isMoving(IplImage *img);
 double dist(CvPoint p1, CvPoint p2);
 double dist(CvPoint2D32f p1, CvPoint2D32f p2);
 
+/* This is a comparator class using the distance from some fixed point */
 class CompareDist {
 	CvPoint2D32f fixed_p;
 public:

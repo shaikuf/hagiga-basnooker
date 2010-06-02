@@ -269,12 +269,14 @@ vector<CvPoint> findPinkOrWhite(IplImage *img, IplImage *templ_p,
 		cout<<"pink:\tcorr="<<max_val_p<<"\tvs.\t"<<corr_thd<<endl;
 		cout<<"white:\tcorr="<<max_val_w<<endl;
 	}
-
+	// if it appears we have found the pink ball
 	if(max_val_p >= corr_thd) {
 		// check if it's really the pink or it's actually white
 		if(max_val_w >= max_val_p && dist(max_p_p, max_p_w) <= BALL_DIAMETER) {
 			// not really found! it's the white.
 		} else {
+			// phew, it's really the pink...
+
 			/* fix the position of the found ball to be the middle of the
 			template */
 			max_p_p.x = max_p_p.x + (templ_p->width)/2;
@@ -331,12 +333,10 @@ int* ballMaxCounts() {
 }
 
 double* ballCorrThds() {
-	//static double ball_thd[8] = {0.9, 0.9, 0.8, 0.9, 0.7, 0.7, 0.85, 0.22};
 	static double ball_thd[8];
 
 	static bool once = true;
 	if(once) {
-		// read from file only once
 		CvMat* thds = (CvMat*)cvLoad("corr-thd.xml");
 
 		int i;
