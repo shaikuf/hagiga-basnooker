@@ -9,7 +9,7 @@ using namespace std;
 /*	Finds a subset of points which reside on a line with some minimal R^2
 	coefficient, and the line parameters. The greedy algorithm tries to
 	fit all of the points, and then dumps the point furthest from the fitted
-	line, until we can fit our set of points with the minimal R^2 required */
+	line, until we can fit our set of points with the minimal R^2 required 
 	Gets:
 		(const vector<CvPoint2D32f>&)points		the given set of points
 		(double)min_coeff	the minimal R^2 coefficient

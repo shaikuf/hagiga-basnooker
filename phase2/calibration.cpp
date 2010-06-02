@@ -916,12 +916,9 @@ void calibrateHoles(CvSize resolution, int device_id){
 
 	cvReleaseMat(&H);
 
-	cvCopy(image, cpy_image);
-
-	//draw the circls for the first time
-	//initilizr the circls positions
+	//initialize the circles positions
 	CvPoint p[6];
-	int radius[6] ;//= {30,30,30,30,30,30};
+	int radius[6];
 	CvMat* holes = (CvMat*)cvLoad("Hole.xml");
 
 	if(holes == 0) {
@@ -938,23 +935,28 @@ void calibrateHoles(CvSize resolution, int device_id){
 		p[4] = cvPoint((p[5].x + p[3].x)/2, (p[5].y + p[3].y)/2);
 			// bottom-center
 
+		radius[0] = 30; radius[1] = 30; radius[2] = 30;
+		radius[3] = 30; radius[4] = 30; radius[5] = 30;
+
 		// allocate a new holes matrix
 		CvMat *holes = cvCreateMat(6, 3, CV_32S);
 
 	} else {
 		for(int i=0; i<6; i++){
-		p[i].x = CV_MAT_ELEM(*holes,int,i,0);
-		p[i].y = CV_MAT_ELEM(*holes,int,i,1);
-		radius[i] = CV_MAT_ELEM(*holes,int,i,2);
+			p[i].x = CV_MAT_ELEM(*holes,int,i,0);
+			p[i].y = CV_MAT_ELEM(*holes,int,i,1);
+			radius[i] = CV_MAT_ELEM(*holes,int,i,2);
+		}
 	}
 	
-	//draw the circles
-	for(int i=0; i<6; i++)
+	//draw the circles for the first time
+	IplImage* cpy_image = cvCloneImage(image);
+	for(int i=0; i<6; i++) {
 		cvCircle(cpy_image, p[i], radius[i], cvScalar(0), -1);
+	}
 
-
-	// show the image
 	cvShowImage("Holes", cpy_image);
+	cvReleaseImage(&cpy_image);
 
 	// let the user customize them
 	char c=0;
@@ -963,12 +965,12 @@ void calibrateHoles(CvSize resolution, int device_id){
 			<<"6:bottom-left"<<endl;
 	c = cvWaitKey(0)-'1';
 	while(c>=0 && c<6) {
-		drawHolesOnImage(image,cpy_image,c,p,radius);
+		drawHolesOnImage(image, c, p, radius);
 		c = cvWaitKey(0)-'1';
 	}
 
 	// save to file
-	for(int i=0; i<6; i++){
+	for(int i=0; i<6; i++) {
 		CV_MAT_ELEM(*holes,int,i,0) = p[i].x;
 		CV_MAT_ELEM(*holes,int,i,1) = p[i].y;
 		CV_MAT_ELEM(*holes,int,i,2) = radius[i];
@@ -978,7 +980,6 @@ void calibrateHoles(CvSize resolution, int device_id){
 
 	// release stuff
 	cvReleaseImage(&image);
-	cvReleaseImage(&cpy_image);
 	cvReleaseImage(&pre_image);
 }
 
