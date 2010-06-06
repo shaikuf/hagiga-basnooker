@@ -12,7 +12,8 @@
 #define BOUNDING_RECT_OFFSET 5
 // the threshold below the calibrated correlation we want to say that a ball
 // was found
-#define BALL_CORR_THD {0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10}
+//#define BALL_CORR_THD {0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10}
+#define BALL_CORR_THD {0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.05}
 // the index of the white ball in all of the arrays
 #define WHITE_INDEX 1
 
