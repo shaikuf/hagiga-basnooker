@@ -5,15 +5,15 @@
 // BALLS
 
 // whether or not to run the balls finding in debug mode
-#define BALLS_FIND_DEBUG 0
+//#define BALLS_FIND_DEBUG 0
 // whether or not to print the found correlation, every time we look for balls
 #define BALLS_CORR_DEBUG 1
 // the offset outside the calibrated borders that we look for the balls in
 #define BOUNDING_RECT_OFFSET 5
 // the threshold below the calibrated correlation we want to say that a ball
 // was found
-//#define BALL_CORR_THD {0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10}
-#define BALL_CORR_THD {0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.05}
+#define BALL_CORR_THD {0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.10}
+//#define BALL_CORR_THD {0.05, 0.05, 0.10, 0.10, 0.10, 0.10, 0.10, 0.05}
 // the index of the white ball in all of the arrays
 #define WHITE_INDEX 1
 
@@ -30,7 +30,7 @@
 // farther, we say that the cue is missing (or just not pointing at the white)
 #define CUE_MAX_DIST_FROM_WHITE 20.0
 // the threshold value when looking for the white blobs on the cue
-#define CUE_THRESH_VAL 220
+#define CUE_THRESH_VAL 230
 // the erode number of repetitions when morphologically filtering the
 // binary image after the threshold
 #define CUE_OPENING_VAL_WHITE 1

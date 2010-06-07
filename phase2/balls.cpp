@@ -7,6 +7,8 @@
 
 using namespace std;
 
+extern int BALLS_FIND_DEBUG;
+
 CvPoint2D32f fixPosition(CvPoint center) {
 	// get the table borders
 	CvSeq* edges = tableBorders();

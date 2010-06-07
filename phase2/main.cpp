@@ -14,6 +14,8 @@
 
 using namespace std;
 
+int BALLS_FIND_DEBUG;
+
 int main(int argc, char* argv[])
 {
 	// the resolution to use
@@ -268,6 +270,8 @@ void gameLoop(CvSize resolution, int device_id) {
 		c=cvWaitKey(50);
 		if(c==' ')
 			find_balls = true;
+		else if(c=='d')
+			BALLS_FIND_DEBUG = 1-BALLS_FIND_DEBUG;
 	}
 
 	// release stuff

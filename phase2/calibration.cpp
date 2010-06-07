@@ -827,8 +827,8 @@ void calibrateCorrelationThds(CvSize resolution, int device_id) {
 void fixCoordinates(int &x, int &y, CvSize resolution) {
 	// this is some ampiric fix i found
 	if(resolution.width = 1600) {
-		x = (int)(x/(1600./1280));
-		y = (int)(y/(1200./997));
+		//x = (int)(x/(1600./1280));
+		y = (int)(y/(1200./(1024-27)));
 	}
 }
 
@@ -939,7 +939,7 @@ void calibrateHoles(CvSize resolution, int device_id){
 		radius[3] = 30; radius[4] = 30; radius[5] = 30;
 
 		// allocate a new holes matrix
-		CvMat *holes = cvCreateMat(6, 3, CV_32S);
+		holes = cvCreateMat(6, 3, CV_32S);
 
 	} else {
 		for(int i=0; i<6; i++){
