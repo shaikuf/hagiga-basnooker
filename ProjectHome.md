@@ -1,0 +1,1 @@
+Uses an HD camera and projector to analyze a pool game, and project help markers.
